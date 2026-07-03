@@ -39,20 +39,22 @@ let starting = false;
 let activeRequests = 0;
 let ui = null;
 
-if (tuiEnabled) {
-  ui = new TerminalUi(state);
-  ui.start();
-  setupKeyboard();
-} else {
-  log("info", "starting in daemon mode without TUI");
+async function main() {
+  if (tuiEnabled) {
+    ui = new TerminalUi(state);
+    ui.start();
+    setupKeyboard();
+  } else {
+    log("info", "starting in daemon mode without TUI");
+  }
+
+  await ensureCodexProtocolGenerated();
+  await startManagedCodexAppServer();
+  await startServer();
+
+  process.on("SIGINT", () => shutdown(0));
+  process.on("SIGTERM", () => shutdown(0));
 }
-
-await ensureCodexProtocolGenerated();
-await startManagedCodexAppServer();
-await startServer();
-
-process.on("SIGINT", () => shutdown(0));
-process.on("SIGTERM", () => shutdown(0));
 
 async function startServer() {
   if (starting) {
@@ -674,3 +676,5 @@ function mask(value) {
 
   return `${value.slice(0, 4)}...${value.slice(-4)}`;
 }
+
+await main();
