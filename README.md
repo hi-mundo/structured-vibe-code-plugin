@@ -1,274 +1,87 @@
-# Codex OpenAI Local Wrapper
+# Awesome Agent Prompts
 
-Run `codex app-server` behind a small local HTTP API that looks like the OpenAI API.
+Reusable prompts, skills, and local recipes for developer agents.
 
-This project is intentionally local-first:
+This repository is a curated place for prompts that make agents do real work:
+start local services, bridge protocols, inspect projects, write docs, debug
+failures, and keep the workflow observable.
 
-- binds to `127.0.0.1` by default;
-- serves clients through the local-friendly host `codex.local`;
-- serves HTTPS by default with an auto-generated local certificate;
-- refuses non-loopback HTTP hosts;
-- uses Node.js built-ins only;
-- starts `codex app-server` for you on loopback;
-- generates Codex app-server protocol files from your installed `codex` binary when needed;
-- shows live request, warning, and error logs in an interactive CLI.
+The prompts are written to be copied into an agent session. They should be
+self-contained, local-first when possible, and explicit about setup,
+validation, logs, cleanup, and known limits.
 
-## What You Get
+## Catalog
 
-- `POST /v1/responses`
-- `POST /v1/chat/completions`
-- `GET /health`
-- interactive terminal UI with hotkeys
-- daemon mode for scripts and automation
-- optional local bearer-token auth
-- per-request `cwd` override for Codex turns
+### Codex
 
-This is not an official OpenAI API server. It is a local adapter for development and automation around `codex app-server`.
+- [OpenAI-compatible local proxy prompt](codex/openai-compatible-local-proxy.md)
+  - Starts `codex app-server` locally.
+  - Creates a temporary mini proxy from OpenAI-style HTTP routes to the Codex
+    websocket protocol.
+  - Exposes `GET /health`, `POST /v1/responses`, and
+    `POST /v1/chat/completions`.
+  - Keeps the bind host on `127.0.0.1`.
 
-## Requirements
+- [Codex app-server websocket notes](codex/app-server-websocket-notes.md)
+  - Practical notes for the Codex app-server websocket lifecycle.
+  - Auth and loopback guidance.
+  - Why raw `nc` is useful for HTTP checks but not enough for websocket frames.
 
-- Node.js 22+
-- `codex` available on `PATH`
+### Warp
 
-## Quickstart
+- [Using local OpenAI-compatible providers from Warp](warp/custom-openai-provider-local.md)
+  - Notes for local-only endpoints.
+  - Why `codex.local` can fail when a client resolves DNS outside your machine.
+  - Safer local alternatives.
 
-Map the local domain once:
+### Shared Patterns
 
-```sh
-sudo sh -c 'grep -q "codex.local" /etc/hosts || echo "127.0.0.1 codex.local" >> /etc/hosts'
-```
+- [Local OpenAI-compatible proxy pattern](shared/local-openai-compatible-proxy-pattern.md)
+  - A reusable pattern for converting OpenAI-shaped HTTP requests into another
+    local agent protocol.
 
-Start the wrapper:
+- [Prompt template](shared/prompt-template.md)
+  - A small template for adding new prompts to this repo.
 
-```sh
-npm run start
-```
-
-That is enough for the normal path. On boot, the wrapper:
-
-- checks whether generated Codex protocol files already exist;
-- generates them if they are missing;
-- starts a managed local `codex app-server`;
-- creates a self-signed local TLS certificate if needed;
-- starts the OpenAI-style HTTP API.
-
-Health check:
-
-```sh
-curl -k https://codex.local:3000/health
-```
-
-Send a Responses-style request:
-
-```sh
-curl -k -sS https://codex.local:3000/v1/responses \
-  -H 'content-type: application/json' \
-  -d '{
-    "model": "codex",
-    "input": "Inspect this project and summarize what it does."
-  }'
-```
-
-## CLI Modes
-
-### Interactive TUI
-
-```sh
-npm run start
-```
-
-The terminal shows live requests, warnings, errors, and a bottom shortcut bar:
-
-- `r`: restart HTTP server
-- `t`: regenerate local API token
-- `c`: change runtime config
-- `q`: quit
-
-### Daemon Mode
-
-Start without the TUI:
-
-```sh
-node src/server.mjs -d
-```
-
-Start without the TUI and require a local bearer token:
-
-```sh
-node src/server.mjs -d ai
-```
-
-Then call routes with:
-
-```sh
-Authorization: Bearer ai
-```
-
-## Routes
-
-### `POST /v1/responses`
-
-```sh
-curl -k -sS https://codex.local:3000/v1/responses \
-  -H 'content-type: application/json' \
-  -d '{
-    "model": "codex",
-    "input": "Say hello from Codex."
-  }'
-```
-
-With auth enabled:
-
-```sh
-curl -k -sS https://codex.local:3000/v1/responses \
-  -H 'authorization: Bearer ai' \
-  -H 'content-type: application/json' \
-  -d '{
-    "model": "codex",
-    "input": "Say hello from Codex."
-  }'
-```
-
-### `POST /v1/chat/completions`
-
-```sh
-curl -k -sS https://codex.local:3000/v1/chat/completions \
-  -H 'content-type: application/json' \
-  -d '{
-    "model": "codex",
-    "messages": [
-      { "role": "user", "content": "Say hello from Codex." }
-    ]
-  }'
-```
-
-## Configuration
-
-Environment variables:
-
-- `BIND_HOST`: HTTP bind host. Defaults to `127.0.0.1`. Non-loopback hosts are refused.
-- `PUBLIC_HOST`: advertised host used in docs, TUI and health responses. Defaults to `codex.local`.
-- `HOST`: backwards-compatible alias for `BIND_HOST`.
-- `PORT`: HTTP port. Defaults to `3000`.
-- `TLS_ENABLED`: set to `false` to use plain HTTP. Defaults to HTTPS.
-- `TLS_CERT_DIR`: local certificate directory. Defaults to `.local/certs`.
-- `CODEX_APP_SERVER_PORT`: managed Codex app-server port. Defaults to `8080`.
-- `CODEX_APP_SERVER_TOKEN`: optional bearer token for a Codex app-server started with websocket auth.
-- `CODEX_CWD`: default working directory passed to Codex turns. Defaults to this wrapper directory.
-- `CODEX_TIMEOUT_MS`: Codex turn timeout. Defaults to `120000`.
-- `LOCAL_API_KEY`: optional local bearer token required by wrapper routes.
-
-The shortcut `t` regenerates `LOCAL_API_KEY` in memory for the running CLI session.
-
-Advanced: set `CODEX_APP_SERVER_URL` only if you intentionally want to connect to an already-running external app-server instead of letting the wrapper manage it.
-
-Per-request cwd override:
-
-```json
-{
-  "model": "codex",
-  "input": "List the files in this project.",
-  "codex": {
-    "cwd": "/absolute/path/to/project"
-  }
-}
-```
-
-## How It Works
-
-The wrapper accepts OpenAI-shaped HTTP requests, translates them into Codex app-server websocket calls, waits for Codex turn completion, and maps the assistant text back into an OpenAI-shaped response.
-
-Internal Codex flow:
+## Repository Shape
 
 ```text
-HTTPS request
-  -> websocket connect
-  -> initialize
-  -> thread/start
-  -> turn/start
-  -> collect item/agentMessage/delta
-  -> wait for turn/completed
-  -> HTTP response
+codex/
+  openai-compatible-local-proxy.md
+  app-server-websocket-notes.md
+warp/
+  custom-openai-provider-local.md
+shared/
+  local-openai-compatible-proxy-pattern.md
+  prompt-template.md
 ```
 
-## Protocol Files
+Future tools can get their own folder, for example `cursor/`, `claude-code/`,
+`aider/`, or `opencode/`.
 
-The generated files live under `generated/codex-app-server/` and are ignored by git. The wrapper creates them automatically when they are missing.
+## What Makes A Prompt Belong Here
 
-You can regenerate them manually after upgrading Codex:
+A good prompt in this repository should include:
 
-```sh
-npm run setup
-```
+- the goal it accomplishes;
+- assumptions and required local tools;
+- exact commands or scripts to create;
+- security boundaries, especially bind hosts and tokens;
+- logs or checks that make failures visible;
+- cleanup instructions;
+- at least one validation command.
 
-## Local TLS
+## Local-First Bias
 
-The wrapper generates a self-signed certificate for:
+Most recipes here prefer local loopback services:
 
-- `codex.local`
-- `localhost`
-- `127.0.0.1`
-- `::1`
+- bind to `127.0.0.1` by default;
+- avoid exposing ports publicly;
+- avoid committing generated credentials or certificates;
+- make warnings and failures visible in the terminal;
+- leave generated scripts in temporary directories unless the prompt says
+  otherwise.
 
-For quick local testing, use `curl -k`.
+## License
 
-```sh
-curl -k https://codex.local:3000/health
-```
-
-For clients that require trusted TLS, import `.local/certs/codex.local.crt` into your local trust store, or run with plain HTTP:
-
-```sh
-TLS_ENABLED=false npm run start
-```
-
-## Current Scope
-
-Implemented:
-
-- `GET /health`
-- `POST /v1/responses`
-- `POST /v1/chat/completions`
-- local-only HTTP bind guard
-- explicit errors for unsupported streaming
-- protocol file generation through `codex app-server generate-ts`
-
-Not implemented yet:
-
-- `stream: true` SSE compatibility
-- tools/function calling
-- file inputs
-- persistent conversation IDs
-- usage/token accounting
-
-## Troubleshooting
-
-### `listen EPERM` in sandboxed environments
-
-Some managed sandboxes block local TCP listeners. Run the wrapper from a normal terminal:
-
-```sh
-node src/server.mjs -d ai
-```
-
-### Managed Codex app-server cannot start
-
-The wrapper starts Codex on `127.0.0.1:8080` by default. If that port is already busy:
-
-```sh
-CODEX_APP_SERVER_PORT=9090 npm run start
-```
-
-### `401 Invalid LOCAL_API_KEY bearer token`
-
-Pass the bearer token configured by `LOCAL_API_KEY`, the daemon argument, or the TUI `t` shortcut:
-
-```sh
-curl -k -H 'authorization: Bearer ai' https://127.0.0.1:3000/health
-```
-
-You can also use:
-
-```sh
-curl -k -H 'authorization: Bearer ai' https://codex.local:3000/health
-```
+MIT. Use the prompts, adapt them, and keep security boundaries explicit.
