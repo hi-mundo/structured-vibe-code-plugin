@@ -1,7 +1,8 @@
 import crypto from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import http from "node:http";
+import https from "node:https";
 import { resolve } from "node:path";
 import readline from "node:readline/promises";
 import { spawn } from "node:child_process";
@@ -23,6 +24,8 @@ const state = {
   bindHost: process.env.BIND_HOST ?? process.env.HOST ?? "127.0.0.1",
   publicHost: process.env.PUBLIC_HOST ?? "codex.local",
   port: Number(process.env.PORT ?? 3000),
+  tlsEnabled: process.env.TLS_ENABLED !== "false",
+  tlsCertDir: process.env.TLS_CERT_DIR ?? ".local/certs",
   codexManaged: !process.env.CODEX_APP_SERVER_URL,
   codexPort: Number(process.env.CODEX_APP_SERVER_PORT ?? 8080),
   codexUrl: process.env.CODEX_APP_SERVER_URL ?? `ws://127.0.0.1:${Number(process.env.CODEX_APP_SERVER_PORT ?? 8080)}`,
@@ -67,7 +70,7 @@ async function startServer() {
   try {
     assertLocalHost(state.bindHost);
 
-    const nextServer = http.createServer(handleRequest);
+    const nextServer = await createHttpServer();
 
     await new Promise((resolve, reject) => {
       nextServer.once("error", reject);
@@ -75,7 +78,7 @@ async function startServer() {
     });
 
     server = nextServer;
-    log("info", `listening http://${state.bindHost}:${state.port}`);
+    log("info", `listening ${serverProtocol()}://${state.bindHost}:${state.port}`);
     log("info", `public base URL ${baseUrl()}`);
     log("info", `${state.codexManaged ? "managed" : "external"} codex app-server ${state.codexUrl}`);
   } catch (error) {
@@ -87,6 +90,76 @@ async function startServer() {
     starting = false;
     ui?.render();
   }
+}
+
+async function createHttpServer() {
+  if (!state.tlsEnabled) {
+    return http.createServer(handleRequest);
+  }
+
+  const tls = await ensureTlsCertificate();
+  return https.createServer(tls, handleRequest);
+}
+
+async function ensureTlsCertificate() {
+  const certDir = resolve(state.tlsCertDir);
+  const keyPath = resolve(certDir, "codex.local.key");
+  const certPath = resolve(certDir, "codex.local.crt");
+  const configPath = resolve(certDir, "openssl.cnf");
+
+  if (!existsSync(keyPath) || !existsSync(certPath)) {
+    log("warn", "local TLS certificate missing; generating self-signed certificate");
+    await mkdir(certDir, { recursive: true });
+    await writeFile(configPath, opensslConfig(), { mode: 0o600 });
+    await runCommand("openssl", [
+      "req",
+      "-x509",
+      "-nodes",
+      "-newkey",
+      "rsa:2048",
+      "-days",
+      "825",
+      "-keyout",
+      keyPath,
+      "-out",
+      certPath,
+      "-config",
+      configPath,
+      "-extensions",
+      "v3_req",
+    ], {
+      label: "local TLS certificate generation",
+    });
+    log("info", `local TLS certificate generated at ${certPath}`);
+  } else {
+    log("info", "local TLS certificate found");
+  }
+
+  return {
+    key: await readFile(keyPath),
+    cert: await readFile(certPath),
+  };
+}
+
+function opensslConfig() {
+  return `[req]
+default_bits = 2048
+default_md = sha256
+distinguished_name = dn
+prompt = no
+
+[dn]
+CN = codex.local
+
+[v3_req]
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.1 = codex.local
+DNS.2 = localhost
+IP.1 = 127.0.0.1
+IP.2 = ::1
+`;
 }
 
 async function stopServer() {
@@ -496,6 +569,10 @@ function setCorsHeaders(response, request) {
   const origin = request.headers.origin;
   const allowedOrigins = new Set([
     baseUrl(),
+    `${serverProtocol()}://${state.bindHost}:${state.port}`,
+    `${serverProtocol()}://127.0.0.1:${state.port}`,
+    `${serverProtocol()}://localhost:${state.port}`,
+    `http://${state.publicHost}:${state.port}`,
     `http://${state.bindHost}:${state.port}`,
     `http://127.0.0.1:${state.port}`,
     `http://localhost:${state.port}`,
@@ -507,7 +584,11 @@ function setCorsHeaders(response, request) {
 }
 
 function baseUrl() {
-  return `http://${state.publicHost}:${state.port}`;
+  return `${serverProtocol()}://${state.publicHost}:${state.port}`;
+}
+
+function serverProtocol() {
+  return state.tlsEnabled ? "https" : "http";
 }
 
 function assertLocalHost(host) {

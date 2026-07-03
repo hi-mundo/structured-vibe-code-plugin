@@ -6,6 +6,7 @@ This project is intentionally local-first:
 
 - binds to `127.0.0.1` by default;
 - serves clients through the local-friendly host `codex.local`;
+- serves HTTPS by default with an auto-generated local certificate;
 - refuses non-loopback HTTP hosts;
 - uses Node.js built-ins only;
 - starts `codex app-server` for you on loopback;
@@ -48,18 +49,19 @@ That is enough for the normal path. On boot, the wrapper:
 - checks whether generated Codex protocol files already exist;
 - generates them if they are missing;
 - starts a managed local `codex app-server`;
+- creates a self-signed local TLS certificate if needed;
 - starts the OpenAI-style HTTP API.
 
 Health check:
 
 ```sh
-curl http://codex.local:3000/health
+curl -k https://codex.local:3000/health
 ```
 
 Send a Responses-style request:
 
 ```sh
-curl -sS http://codex.local:3000/v1/responses \
+curl -k -sS https://codex.local:3000/v1/responses \
   -H 'content-type: application/json' \
   -d '{
     "model": "codex",
@@ -107,7 +109,7 @@ Authorization: Bearer ai
 ### `POST /v1/responses`
 
 ```sh
-curl -sS http://codex.local:3000/v1/responses \
+curl -k -sS https://codex.local:3000/v1/responses \
   -H 'content-type: application/json' \
   -d '{
     "model": "codex",
@@ -118,7 +120,7 @@ curl -sS http://codex.local:3000/v1/responses \
 With auth enabled:
 
 ```sh
-curl -sS http://codex.local:3000/v1/responses \
+curl -k -sS https://codex.local:3000/v1/responses \
   -H 'authorization: Bearer ai' \
   -H 'content-type: application/json' \
   -d '{
@@ -130,7 +132,7 @@ curl -sS http://codex.local:3000/v1/responses \
 ### `POST /v1/chat/completions`
 
 ```sh
-curl -sS http://codex.local:3000/v1/chat/completions \
+curl -k -sS https://codex.local:3000/v1/chat/completions \
   -H 'content-type: application/json' \
   -d '{
     "model": "codex",
@@ -148,6 +150,8 @@ Environment variables:
 - `PUBLIC_HOST`: advertised host used in docs, TUI and health responses. Defaults to `codex.local`.
 - `HOST`: backwards-compatible alias for `BIND_HOST`.
 - `PORT`: HTTP port. Defaults to `3000`.
+- `TLS_ENABLED`: set to `false` to use plain HTTP. Defaults to HTTPS.
+- `TLS_CERT_DIR`: local certificate directory. Defaults to `.local/certs`.
 - `CODEX_APP_SERVER_PORT`: managed Codex app-server port. Defaults to `8080`.
 - `CODEX_APP_SERVER_TOKEN`: optional bearer token for a Codex app-server started with websocket auth.
 - `CODEX_CWD`: default working directory passed to Codex turns. Defaults to this wrapper directory.
@@ -177,7 +181,7 @@ The wrapper accepts OpenAI-shaped HTTP requests, translates them into Codex app-
 Internal Codex flow:
 
 ```text
-HTTP request
+HTTPS request
   -> websocket connect
   -> initialize
   -> thread/start
@@ -195,6 +199,27 @@ You can regenerate them manually after upgrading Codex:
 
 ```sh
 npm run setup
+```
+
+## Local TLS
+
+The wrapper generates a self-signed certificate for:
+
+- `codex.local`
+- `localhost`
+- `127.0.0.1`
+- `::1`
+
+For quick local testing, use `curl -k`.
+
+```sh
+curl -k https://codex.local:3000/health
+```
+
+For clients that require trusted TLS, import `.local/certs/codex.local.crt` into your local trust store, or run with plain HTTP:
+
+```sh
+TLS_ENABLED=false npm run start
 ```
 
 ## Current Scope
@@ -239,11 +264,11 @@ CODEX_APP_SERVER_PORT=9090 npm run start
 Pass the bearer token configured by `LOCAL_API_KEY`, the daemon argument, or the TUI `t` shortcut:
 
 ```sh
-curl -H 'authorization: Bearer ai' http://127.0.0.1:3000/health
+curl -k -H 'authorization: Bearer ai' https://127.0.0.1:3000/health
 ```
 
 You can also use:
 
 ```sh
-curl -H 'authorization: Bearer ai' http://codex.local:3000/health
+curl -k -H 'authorization: Bearer ai' https://codex.local:3000/health
 ```
