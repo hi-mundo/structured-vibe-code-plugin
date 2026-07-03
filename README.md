@@ -7,7 +7,8 @@ This project is intentionally local-first:
 - binds to `127.0.0.1` by default;
 - refuses non-loopback HTTP hosts;
 - uses Node.js built-ins only;
-- generates Codex app-server protocol files from your installed `codex` binary;
+- starts `codex app-server` for you on loopback;
+- generates Codex app-server protocol files from your installed `codex` binary when needed;
 - shows live request, warning, and error logs in an interactive CLI.
 
 ## What You Get
@@ -29,23 +30,18 @@ This is not an official OpenAI API server. It is a local adapter for development
 
 ## Quickstart
 
-Generate the Codex app-server protocol files:
+Start the wrapper:
 
 ```sh
-npm run setup
+npm run start
 ```
 
-Start Codex app-server locally:
+That is enough for the normal path. On boot, the wrapper:
 
-```sh
-codex app-server --listen ws://127.0.0.1:8080
-```
-
-In another terminal, start the HTTP wrapper in interactive CLI mode:
-
-```sh
-npm run dev
-```
+- checks whether generated Codex protocol files already exist;
+- generates them if they are missing;
+- starts a managed local `codex app-server`;
+- starts the OpenAI-style HTTP API.
 
 Health check:
 
@@ -143,13 +139,15 @@ Environment variables:
 
 - `HOST`: HTTP bind host. Defaults to `127.0.0.1`. Non-loopback hosts are refused.
 - `PORT`: HTTP port. Defaults to `3000`.
-- `CODEX_APP_SERVER_URL`: Codex websocket URL. Defaults to `ws://127.0.0.1:8080`.
+- `CODEX_APP_SERVER_PORT`: managed Codex app-server port. Defaults to `8080`.
 - `CODEX_APP_SERVER_TOKEN`: optional bearer token for a Codex app-server started with websocket auth.
 - `CODEX_CWD`: default working directory passed to Codex turns. Defaults to this wrapper directory.
 - `CODEX_TIMEOUT_MS`: Codex turn timeout. Defaults to `120000`.
 - `LOCAL_API_KEY`: optional local bearer token required by wrapper routes.
 
 The shortcut `t` regenerates `LOCAL_API_KEY` in memory for the running CLI session.
+
+Advanced: set `CODEX_APP_SERVER_URL` only if you intentionally want to connect to an already-running external app-server instead of letting the wrapper manage it.
 
 Per-request cwd override:
 
@@ -180,9 +178,11 @@ HTTP request
   -> HTTP response
 ```
 
-## Regenerate Protocol Files
+## Protocol Files
 
-The generated files live under `generated/codex-app-server/` and are ignored by git. Regenerate them whenever your installed Codex version changes:
+The generated files live under `generated/codex-app-server/` and are ignored by git. The wrapper creates them automatically when they are missing.
+
+You can regenerate them manually after upgrading Codex:
 
 ```sh
 npm run setup
@@ -217,18 +217,12 @@ Some managed sandboxes block local TCP listeners. Run the wrapper from a normal 
 node src/server.mjs -d ai
 ```
 
-### `Failed to connect to codex app-server`
+### Managed Codex app-server cannot start
 
-Start Codex app-server first:
-
-```sh
-codex app-server --listen ws://127.0.0.1:8080
-```
-
-If you changed the websocket URL:
+The wrapper starts Codex on `127.0.0.1:8080` by default. If that port is already busy:
 
 ```sh
-CODEX_APP_SERVER_URL=ws://127.0.0.1:9090 npm run start
+CODEX_APP_SERVER_PORT=9090 npm run start
 ```
 
 ### `401 Invalid LOCAL_API_KEY bearer token`

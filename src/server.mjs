@@ -1,6 +1,10 @@
 import crypto from "node:crypto";
+import { existsSync } from "node:fs";
+import { mkdir } from "node:fs/promises";
 import http from "node:http";
+import { resolve } from "node:path";
 import readline from "node:readline/promises";
+import { spawn } from "node:child_process";
 import { stdin as input, stdout as output } from "node:process";
 import { CodexAppServerClient } from "./codex-client.mjs";
 import {
@@ -18,7 +22,9 @@ const tuiEnabled = !args.daemon && process.stdin.isTTY && process.stdout.isTTY;
 const state = {
   host: process.env.HOST ?? "127.0.0.1",
   port: Number(process.env.PORT ?? 3000),
-  codexUrl: process.env.CODEX_APP_SERVER_URL ?? "ws://127.0.0.1:8080",
+  codexManaged: !process.env.CODEX_APP_SERVER_URL,
+  codexPort: Number(process.env.CODEX_APP_SERVER_PORT ?? 8080),
+  codexUrl: process.env.CODEX_APP_SERVER_URL ?? `ws://127.0.0.1:${Number(process.env.CODEX_APP_SERVER_PORT ?? 8080)}`,
   codexToken: process.env.CODEX_APP_SERVER_TOKEN ?? null,
   localApiKey: process.env.LOCAL_API_KEY ?? args.apiKey ?? null,
   defaultCwd: process.env.CODEX_CWD ?? process.cwd(),
@@ -26,6 +32,9 @@ const state = {
 };
 
 let server = null;
+let codexProcess = null;
+let codexProcessStopping = false;
+let codexProcessPortInUse = false;
 let starting = false;
 let activeRequests = 0;
 let ui = null;
@@ -38,6 +47,8 @@ if (tuiEnabled) {
   log("info", "starting in daemon mode without TUI");
 }
 
+await ensureCodexProtocolGenerated();
+await startManagedCodexAppServer();
 await startServer();
 
 process.on("SIGINT", () => shutdown(0));
@@ -62,7 +73,7 @@ async function startServer() {
 
     server = nextServer;
     log("info", `listening http://${state.host}:${state.port}`);
-    log("info", `codex app-server ${state.codexUrl}`);
+    log("info", `${state.codexManaged ? "managed" : "external"} codex app-server ${state.codexUrl}`);
   } catch (error) {
     log("error", `failed to start server on ${state.host}:${state.port}: ${error.message}`);
     if (!tuiEnabled) {
@@ -87,9 +98,133 @@ async function stopServer() {
 }
 
 async function restartServer() {
-  log("warn", "restarting server");
+  log("warn", "restarting wrapper");
   await stopServer();
+  await stopManagedCodexAppServer();
+  await startManagedCodexAppServer();
   await startServer();
+}
+
+async function ensureCodexProtocolGenerated() {
+  const outDir = resolve("generated/codex-app-server");
+  const expectedFiles = [
+    resolve(outDir, "ClientRequest.ts"),
+    resolve(outDir, "ServerNotification.ts"),
+  ];
+
+  if (expectedFiles.every((file) => existsSync(file))) {
+    log("info", "codex protocol files found");
+    return;
+  }
+
+  log("warn", "codex protocol files missing; generating them now");
+  await mkdir(outDir, { recursive: true });
+
+  await runCommand("codex", ["app-server", "generate-ts", "--out", outDir, "--experimental"], {
+    label: "codex protocol generation",
+  });
+
+  log("info", "codex protocol files generated");
+}
+
+async function startManagedCodexAppServer() {
+  if (!state.codexManaged) {
+    log("info", "using external codex app-server");
+    return;
+  }
+
+  if (codexProcess) {
+    return;
+  }
+
+  codexProcessStopping = false;
+  codexProcessPortInUse = false;
+  log("info", `starting managed codex app-server on ${state.codexUrl}`);
+
+  codexProcess = spawn("codex", ["app-server", "--listen", state.codexUrl], {
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+
+  codexProcess.stdout.setEncoding("utf8");
+  codexProcess.stderr.setEncoding("utf8");
+  codexProcess.stdout.on("data", (chunk) => logProcessOutput("codex", chunk));
+  codexProcess.stderr.on("data", (chunk) => {
+    if (String(chunk).includes("Address already in use")) {
+      codexProcessPortInUse = true;
+    }
+    logProcessOutput("codex", chunk, "warn");
+  });
+
+  codexProcess.on("error", (error) => {
+    log("error", `failed to start managed codex app-server: ${error.message}`);
+  });
+
+  codexProcess.on("exit", (code, signal) => {
+    const expected = codexProcessStopping;
+    codexProcess = null;
+    if (expected) {
+      log("info", "managed codex app-server stopped");
+      return;
+    }
+
+    const reason = signal ? `signal ${signal}` : `exit code ${code}`;
+    if (codexProcessPortInUse) {
+      log("warn", `managed codex app-server could not bind ${state.codexUrl}; continuing if an existing Codex app-server is responding`);
+      return;
+    }
+
+    log("error", `managed codex app-server exited unexpectedly: ${reason}`);
+  });
+
+  await waitForCodexAppServerReady();
+}
+
+async function stopManagedCodexAppServer() {
+  if (!codexProcess) {
+    return;
+  }
+
+  codexProcessStopping = true;
+  const child = codexProcess;
+  child.kill("SIGTERM");
+
+  await new Promise((resolveStop) => {
+    const timer = setTimeout(() => {
+      if (codexProcess === child) {
+        child.kill("SIGKILL");
+      }
+      resolveStop();
+    }, 2_000);
+
+    child.once("exit", () => {
+      clearTimeout(timer);
+      resolveStop();
+    });
+  });
+}
+
+async function waitForCodexAppServerReady() {
+  const started = Date.now();
+  let lastError = null;
+
+  while (Date.now() - started < 7_500) {
+    try {
+      const client = new CodexAppServerClient({
+        url: state.codexUrl,
+        token: state.codexToken,
+        cwd: state.defaultCwd,
+        timeoutMs: 5_000,
+      });
+      await client.initializeOnly();
+      log("info", "managed codex app-server is ready");
+      return;
+    } catch (error) {
+      lastError = error;
+      await delay(250);
+    }
+  }
+
+  log("warn", `managed codex app-server readiness check did not pass yet: ${lastError?.message ?? "unknown error"}`);
 }
 
 async function handleRequest(request, response) {
@@ -132,7 +267,7 @@ async function handleRequest(request, response) {
       const codex = createCodexClient();
       const result = await codex.runPrompt({
         prompt,
-        model: body.model ?? null,
+        model: codexModelFromRequest(body.model),
         cwd: body.codex?.cwd ?? body.cwd ?? null,
       });
 
@@ -155,7 +290,7 @@ async function handleRequest(request, response) {
       const codex = createCodexClient();
       const result = await codex.runPrompt({
         prompt,
-        model: body.model ?? null,
+        model: codexModelFromRequest(body.model),
         cwd: body.codex?.cwd ?? body.cwd ?? null,
       });
 
@@ -201,6 +336,14 @@ function createCodexClient() {
   });
 }
 
+function codexModelFromRequest(model) {
+  if (!model || model === "codex") {
+    return null;
+  }
+
+  return model;
+}
+
 function setupKeyboard() {
   process.stdin.setRawMode(true);
   process.stdin.resume();
@@ -242,7 +385,7 @@ async function changeConfig() {
   try {
     const host = await askDefault(rl, "Host", state.host);
     const port = Number(await askDefault(rl, "Port", String(state.port)));
-    const codexUrl = await askDefault(rl, "Codex websocket URL", state.codexUrl);
+    const codexPort = Number(await askDefault(rl, "Managed Codex app-server port", String(state.codexPort)));
     const defaultCwd = await askDefault(rl, "Default cwd", state.defaultCwd);
     const timeoutMs = Number(await askDefault(rl, "Timeout ms", String(state.timeoutMs)));
 
@@ -256,10 +399,18 @@ async function changeConfig() {
       return;
     }
 
-    const needsRestart = host !== state.host || port !== state.port;
+    if (!Number.isInteger(codexPort) || codexPort <= 0 || codexPort > 65535) {
+      log("error", `invalid codex app-server port: ${codexPort}`);
+      return;
+    }
+
+    const needsRestart = host !== state.host || port !== state.port || codexPort !== state.codexPort;
     state.host = host;
     state.port = port;
-    state.codexUrl = codexUrl;
+    state.codexPort = codexPort;
+    if (state.codexManaged) {
+      state.codexUrl = `ws://127.0.0.1:${codexPort}`;
+    }
     state.defaultCwd = defaultCwd;
     state.timeoutMs = timeoutMs;
 
@@ -283,6 +434,7 @@ async function askDefault(rl, label, current) {
 async function shutdown(code) {
   log("info", "shutting down");
   await stopServer();
+  await stopManagedCodexAppServer();
   ui?.stop();
   process.exit(code);
 }
@@ -357,6 +509,40 @@ function log(level, message) {
     const prefix = level.toUpperCase().padEnd(7);
     console.log(`${entry.time} ${prefix} ${message}`);
   }
+}
+
+function logProcessOutput(source, chunk, level = "info") {
+  for (const line of String(chunk).split(/\r?\n/)) {
+    if (line.trim()) {
+      log(level, `${source}: ${line.trim()}`);
+    }
+  }
+}
+
+function runCommand(command, args, { label }) {
+  return new Promise((resolveRun, rejectRun) => {
+    const child = spawn(command, args, {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => logProcessOutput(label, chunk));
+    child.stderr.on("data", (chunk) => logProcessOutput(label, chunk, "warn"));
+    child.on("error", rejectRun);
+    child.on("exit", (code) => {
+      if (code === 0) {
+        resolveRun();
+        return;
+      }
+
+      rejectRun(new Error(`${label} failed with exit code ${code}`));
+    });
+  });
+}
+
+function delay(ms) {
+  return new Promise((resolveDelay) => setTimeout(resolveDelay, ms));
 }
 
 function parseArgs(argv) {

@@ -16,6 +16,68 @@ export class CodexAppServerClient {
     this.nextId = 1;
   }
 
+  async initializeOnly() {
+    const ws = await this.#connect();
+    const pending = new Map();
+
+    ws.addEventListener("message", (event) => {
+      let message;
+      try {
+        message = JSON.parse(String(event.data));
+      } catch {
+        return;
+      }
+
+      if (message.id != null && pending.has(message.id)) {
+        const entry = pending.get(message.id);
+        pending.delete(message.id);
+        clearTimeout(entry.timer);
+
+        if (message.error) {
+          entry.reject(new Error(formatCodexError(message.error)));
+        } else {
+          entry.resolve(message.result);
+        }
+      }
+    });
+
+    const request = (method, params) => {
+      const id = this.nextId++;
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          pending.delete(id);
+          reject(new Error(`Timed out waiting for codex app-server method ${method}`));
+        }, this.timeoutMs);
+
+        pending.set(id, { resolve, reject, timer });
+        ws.send(JSON.stringify({ id, method, params }));
+      });
+    };
+
+    try {
+      await request("initialize", {
+        clientInfo: {
+          name: "codex-openai-local-wrapper",
+          title: "Codex OpenAI Local Wrapper",
+          version: "0.1.0",
+        },
+        capabilities: {
+          experimentalApi: true,
+          requestAttestation: false,
+        },
+      });
+      ws.send(JSON.stringify({ method: "initialized" }));
+    } finally {
+      for (const entry of pending.values()) {
+        clearTimeout(entry.timer);
+      }
+      pending.clear();
+      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+        ws.close();
+      }
+    }
+  }
+
   async runPrompt({ prompt, model = null, cwd = null }) {
     if (typeof prompt !== "string" || prompt.trim().length === 0) {
       throw httpError(400, "Prompt text cannot be empty");
