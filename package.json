@@ -1,0 +1,17 @@
+{
+  "name": "codex-openai-local-wrapper",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local OpenAI-style HTTP wrapper for codex app-server.",
+  "scripts": {
+    "setup": "node scripts/setup-codex-protocol.mjs",
+    "dev": "node --watch src/server.mjs",
+    "start": "node src/server.mjs",
+    "typecheck": "node --check src/server.mjs && node --check src/codex-client.mjs && node --check src/openai-shapes.mjs && node --check scripts/setup-codex-protocol.mjs",
+    "smoke:health": "node scripts/smoke-health.mjs"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
