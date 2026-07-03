@@ -20,7 +20,8 @@ const args = parseArgs(process.argv.slice(2));
 const tuiEnabled = !args.daemon && process.stdin.isTTY && process.stdout.isTTY;
 
 const state = {
-  host: process.env.HOST ?? "127.0.0.1",
+  bindHost: process.env.BIND_HOST ?? process.env.HOST ?? "127.0.0.1",
+  publicHost: process.env.PUBLIC_HOST ?? "codex.local",
   port: Number(process.env.PORT ?? 3000),
   codexManaged: !process.env.CODEX_APP_SERVER_URL,
   codexPort: Number(process.env.CODEX_APP_SERVER_PORT ?? 8080),
@@ -64,20 +65,21 @@ async function startServer() {
   starting = true;
 
   try {
-    assertLocalHost(state.host);
+    assertLocalHost(state.bindHost);
 
     const nextServer = http.createServer(handleRequest);
 
     await new Promise((resolve, reject) => {
       nextServer.once("error", reject);
-      nextServer.listen(state.port, state.host, resolve);
+      nextServer.listen(state.port, state.bindHost, resolve);
     });
 
     server = nextServer;
-    log("info", `listening http://${state.host}:${state.port}`);
+    log("info", `listening http://${state.bindHost}:${state.port}`);
+    log("info", `public base URL ${baseUrl()}`);
     log("info", `${state.codexManaged ? "managed" : "external"} codex app-server ${state.codexUrl}`);
   } catch (error) {
-    log("error", `failed to start server on ${state.host}:${state.port}: ${error.message}`);
+    log("error", `failed to start server on ${state.bindHost}:${state.port}: ${error.message}`);
     if (!tuiEnabled) {
       process.exit(1);
     }
@@ -237,7 +239,7 @@ async function handleRequest(request, response) {
   let status = 500;
 
   try {
-    setCorsHeaders(response);
+    setCorsHeaders(response, request);
 
     if (request.method === "OPTIONS") {
       status = 204;
@@ -251,8 +253,10 @@ async function handleRequest(request, response) {
       sendJson(response, status, {
         ok: true,
         mode: tuiEnabled ? "tui" : "daemon",
+        base_url: baseUrl(),
         codex_app_server_url: state.codexUrl,
-        host: state.host,
+        bind_host: state.bindHost,
+        public_host: state.publicHost,
         port: state.port,
         active_requests: activeRequests,
         local_auth: Boolean(state.localApiKey),
@@ -385,7 +389,8 @@ async function changeConfig() {
 
   const rl = readline.createInterface({ input, output });
   try {
-    const host = await askDefault(rl, "Host", state.host);
+    const bindHost = await askDefault(rl, "Bind host", state.bindHost);
+    const publicHost = await askDefault(rl, "Public host", state.publicHost);
     const port = Number(await askDefault(rl, "Port", String(state.port)));
     const codexPort = Number(await askDefault(rl, "Managed Codex app-server port", String(state.codexPort)));
     const defaultCwd = await askDefault(rl, "Default cwd", state.defaultCwd);
@@ -406,8 +411,9 @@ async function changeConfig() {
       return;
     }
 
-    const needsRestart = host !== state.host || port !== state.port || codexPort !== state.codexPort;
-    state.host = host;
+    const needsRestart = bindHost !== state.bindHost || port !== state.port || codexPort !== state.codexPort;
+    state.bindHost = bindHost;
+    state.publicHost = publicHost;
     state.port = port;
     state.codexPort = codexPort;
     if (state.codexManaged) {
@@ -486,10 +492,22 @@ function sendJson(response, status, body) {
   response.end(`${JSON.stringify(body, null, 2)}\n`);
 }
 
-function setCorsHeaders(response) {
-  response.setHeader("access-control-allow-origin", "http://127.0.0.1");
+function setCorsHeaders(response, request) {
+  const origin = request.headers.origin;
+  const allowedOrigins = new Set([
+    baseUrl(),
+    `http://${state.bindHost}:${state.port}`,
+    `http://127.0.0.1:${state.port}`,
+    `http://localhost:${state.port}`,
+  ]);
+
+  response.setHeader("access-control-allow-origin", allowedOrigins.has(origin) ? origin : baseUrl());
   response.setHeader("access-control-allow-methods", "GET,POST,OPTIONS");
   response.setHeader("access-control-allow-headers", "authorization,content-type");
+}
+
+function baseUrl() {
+  return `http://${state.publicHost}:${state.port}`;
 }
 
 function assertLocalHost(host) {
@@ -623,7 +641,7 @@ class TerminalUi {
     process.stdout.write("\x1b[2J\x1b[H");
     process.stdout.write(color("Codex OpenAI Local Wrapper", "cyan"));
     process.stdout.write("\n");
-    process.stdout.write(`HTTP http://${this.config.host}:${this.config.port}  Codex ${this.config.codexUrl}  Active ${activeRequests}\n`);
+    process.stdout.write(`HTTP ${baseUrl()} -> ${this.config.bindHost}:${this.config.port}  Codex ${this.config.codexUrl}  Active ${activeRequests}\n`);
     process.stdout.write(`cwd ${this.config.defaultCwd}\n`);
     process.stdout.write(`auth ${this.config.localApiKey ? mask(this.config.localApiKey) : "off"}\n`);
     process.stdout.write("".padEnd(columns, "-").slice(0, columns));

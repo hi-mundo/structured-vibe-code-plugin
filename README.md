@@ -5,6 +5,7 @@ Run `codex app-server` behind a small local HTTP API that looks like the OpenAI 
 This project is intentionally local-first:
 
 - binds to `127.0.0.1` by default;
+- serves clients through the local-friendly host `codex.local`;
 - refuses non-loopback HTTP hosts;
 - uses Node.js built-ins only;
 - starts `codex app-server` for you on loopback;
@@ -30,6 +31,12 @@ This is not an official OpenAI API server. It is a local adapter for development
 
 ## Quickstart
 
+Map the local domain once:
+
+```sh
+sudo sh -c 'grep -q "codex.local" /etc/hosts || echo "127.0.0.1 codex.local" >> /etc/hosts'
+```
+
 Start the wrapper:
 
 ```sh
@@ -46,13 +53,13 @@ That is enough for the normal path. On boot, the wrapper:
 Health check:
 
 ```sh
-curl http://127.0.0.1:3000/health
+curl http://codex.local:3000/health
 ```
 
 Send a Responses-style request:
 
 ```sh
-curl -sS http://127.0.0.1:3000/v1/responses \
+curl -sS http://codex.local:3000/v1/responses \
   -H 'content-type: application/json' \
   -d '{
     "model": "codex",
@@ -100,7 +107,7 @@ Authorization: Bearer ai
 ### `POST /v1/responses`
 
 ```sh
-curl -sS http://127.0.0.1:3000/v1/responses \
+curl -sS http://codex.local:3000/v1/responses \
   -H 'content-type: application/json' \
   -d '{
     "model": "codex",
@@ -111,7 +118,7 @@ curl -sS http://127.0.0.1:3000/v1/responses \
 With auth enabled:
 
 ```sh
-curl -sS http://127.0.0.1:3000/v1/responses \
+curl -sS http://codex.local:3000/v1/responses \
   -H 'authorization: Bearer ai' \
   -H 'content-type: application/json' \
   -d '{
@@ -123,7 +130,7 @@ curl -sS http://127.0.0.1:3000/v1/responses \
 ### `POST /v1/chat/completions`
 
 ```sh
-curl -sS http://127.0.0.1:3000/v1/chat/completions \
+curl -sS http://codex.local:3000/v1/chat/completions \
   -H 'content-type: application/json' \
   -d '{
     "model": "codex",
@@ -137,7 +144,9 @@ curl -sS http://127.0.0.1:3000/v1/chat/completions \
 
 Environment variables:
 
-- `HOST`: HTTP bind host. Defaults to `127.0.0.1`. Non-loopback hosts are refused.
+- `BIND_HOST`: HTTP bind host. Defaults to `127.0.0.1`. Non-loopback hosts are refused.
+- `PUBLIC_HOST`: advertised host used in docs, TUI and health responses. Defaults to `codex.local`.
+- `HOST`: backwards-compatible alias for `BIND_HOST`.
 - `PORT`: HTTP port. Defaults to `3000`.
 - `CODEX_APP_SERVER_PORT`: managed Codex app-server port. Defaults to `8080`.
 - `CODEX_APP_SERVER_TOKEN`: optional bearer token for a Codex app-server started with websocket auth.
@@ -231,4 +240,10 @@ Pass the bearer token configured by `LOCAL_API_KEY`, the daemon argument, or the
 
 ```sh
 curl -H 'authorization: Bearer ai' http://127.0.0.1:3000/health
+```
+
+You can also use:
+
+```sh
+curl -H 'authorization: Bearer ai' http://codex.local:3000/health
 ```
