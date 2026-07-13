@@ -1,0 +1,4 @@
+interface:
+  display_name: "Intent-to-Behavior Review"
+  short_description: "Find logic gaps between intent and behavior"
+  default_prompt: "Use $intent-to-behavior-review to model the intended behavior, compare it with the implementation, and report evidence-backed logic defects."

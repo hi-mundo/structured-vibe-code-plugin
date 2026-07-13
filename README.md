@@ -1,87 +1,61 @@
-# Awesome Agent Prompts
+# Awesome VibeCoding Plugins
 
-Reusable prompts, skills, and local recipes for developer agents.
+Codex plugin source for review, development, debugging, and observable local workflows.
 
-This repository is a curated place for prompts that make agents do real work:
-start local services, bridge protocols, inspect projects, write docs, debug
-failures, and keep the workflow observable.
+The repository is organized as a repo-backed marketplace. Each distributable capability lives under `plugins/<plugin-name>/` with its own manifest, skills, references, and deterministic runtime scripts when needed.
 
-The prompts are written to be copied into an agent session. They should be
-self-contained, local-first when possible, and explicit about setup,
-validation, logs, cleanup, and known limits.
+## Plugins
 
-## Catalog
+### Intent-to-Behavior Review
 
-### Codex
+[Open the plugin source](plugins/intent-to-behavior-review/)
 
-- [OpenAI-compatible local proxy prompt](codex/openai-compatible-local-proxy.md)
-  - Starts `codex app-server` locally.
-  - Creates a temporary mini proxy from OpenAI-style HTTP routes to the Codex
-    websocket protocol.
-  - Exposes `GET /health`, `POST /v1/responses`, and
-    `POST /v1/chat/completions`.
-  - Keeps the bind host on `127.0.0.1`.
+- Reconstructs what an application or feature should do before treating its current implementation as correct.
+- Supports deep repository, scoped feature, and branch/commit comparison reviews.
+- Inspects at least three meaningful revisions to model behavioral evolution.
+- Finds semantic, functional, domain, integration, state, and observability defects—including successful executions that fail their purpose.
+- Includes deterministic Python preflight, direct-import mimic, and report-validation helpers.
+- Uses published IEEE, ACM, Wiley, Springer Nature, and IBM Research foundations.
 
-- [Codex app-server websocket notes](codex/app-server-websocket-notes.md)
-  - Practical notes for the Codex app-server websocket lifecycle.
-  - Auth and loopback guidance.
-  - Why raw `nc` is useful for HTTP checks but not enough for websocket frames.
+## Install as a Codex plugin source
 
-### Warp
-
-- [Using local OpenAI-compatible providers from Warp](warp/custom-openai-provider-local.md)
-  - Notes for local-only endpoints.
-  - Why `codex.local` can fail when a client resolves DNS outside your machine.
-  - Safer local alternatives.
-
-### Shared Patterns
-
-- [Local OpenAI-compatible proxy pattern](shared/local-openai-compatible-proxy-pattern.md)
-  - A reusable pattern for converting OpenAI-shaped HTTP requests into another
-    local agent protocol.
-
-- [Prompt template](shared/prompt-template.md)
-  - A small template for adding new prompts to this repo.
-
-## Repository Shape
-
-```text
-codex/
-  openai-compatible-local-proxy.md
-  app-server-websocket-notes.md
-warp/
-  custom-openai-provider-local.md
-shared/
-  local-openai-compatible-proxy-pattern.md
-  prompt-template.md
+```bash
+git clone https://github.com/hi-mundo/awesome-vibecoding-plugins.git
+codex plugin marketplace add /absolute/path/to/awesome-vibecoding-plugins
+codex plugin add intent-to-behavior-review@awesome-vibecoding-plugins
 ```
 
-Future tools can get their own folder, for example `cursor/`, `claude-code/`,
-`aider/`, or `opencode/`.
+The marketplace identifier is `awesome-vibecoding-plugins`, as declared in `.agents/plugins/marketplace.json`.
 
-## What Makes A Prompt Belong Here
+## Repository shape
 
-A good prompt in this repository should include:
+```text
+.agents/plugins/marketplace.json
+plugins/
+  intent-to-behavior-review/
+    .codex-plugin/plugin.json
+    skills/
+      intent-to-behavior-review/
+        SKILL.md
+        agents/openai.yaml
+        references/
+    scripts/
+codex/   # legacy prompt/reference material
+shared/  # legacy shared patterns
+warp/    # legacy Warp notes
+```
 
-- the goal it accomplishes;
-- assumptions and required local tools;
-- exact commands or scripts to create;
-- security boundaries, especially bind hosts and tokens;
-- logs or checks that make failures visible;
-- cleanup instructions;
-- at least one validation command.
+New distributable work belongs under `plugins/`. The existing `codex/`, `shared/`, and `warp/` documents are retained as reference material; they are not advertised as installable plugins.
 
-## Local-First Bias
+## Plugin quality bar
 
-Most recipes here prefer local loopback services:
-
-- bind to `127.0.0.1` by default;
-- avoid exposing ports publicly;
-- avoid committing generated credentials or certificates;
-- make warnings and failures visible in the terminal;
-- leave generated scripts in temporary directories unless the prompt says
-  otherwise.
+- State the behavior and boundaries the plugin owns.
+- Keep failure states visible; never fabricate success.
+- Prefer local, deterministic helpers for repeated mechanical work.
+- Keep product and domain decisions with the user.
+- Include focused validation for scripts and manifests.
+- Document external references and known methodological limits.
 
 ## License
 
-MIT. Use the prompts, adapt them, and keep security boundaries explicit.
+MIT.
