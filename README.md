@@ -1,61 +1,60 @@
-# Awesome VibeCoding Plugins
+# Structured VibeCoding Plugins
 
-Codex plugin source for review, development, debugging, and observable local workflows.
+Professional controls for AI-assisted development: understand purpose before judging code, keep architecture decisions with the human, model the repository, and finish one validated scope at a time.
 
-The repository is organized as a repo-backed marketplace. Each distributable capability lives under `plugins/<plugin-name>/` with its own manifest, skills, references, and deterministic runtime scripts when needed.
+[![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
+[![Codex marketplace](https://img.shields.io/badge/Codex-marketplace-111827.svg)](codex://plugins/marketplace/add?url=https%3A%2F%2Fgithub.com%2Fhi-mundo%2Fstructured-vibecoding-plugins.git)
+[![Claude marketplace](https://img.shields.io/badge/Claude-copy%20commands-d97706.svg)](#claude-code)
 
 ## Plugins
 
-### Intent-to-Behavior Review
+| Plugin | What it controls | What it is not |
+|---|---|---|
+| **Review I2B** | Reconstructs intended behavior, examines at least three relevant revisions, compares actual behavior, runs focused mimic probes when justified, and maintains `.decisions.jsonl`. | A generic test runner or an exception scanner. |
+| **VibeCoding Protector** | Models the repository in `STRUCTURE.md`, makes architecture choices explicit and human-owned, gates a single coherent slice, validation, commit authorization, and clean worktree. | An autonomous architect or a file-count commit bot. |
 
-[Open the plugin source](plugins/intent-to-behavior-review/)
+## Install
 
-- Reconstructs what an application or feature should do before treating its current implementation as correct.
-- Supports deep repository, scoped feature, and branch/commit comparison reviews.
-- Inspects at least three meaningful revisions to model behavioral evolution.
-- Finds semantic, functional, domain, integration, state, and observability defects—including successful executions that fail their purpose.
-- Includes deterministic Python preflight, direct-import mimic, and report-validation helpers.
-- Uses published IEEE, ACM, Wiley, Springer Nature, and IBM Research foundations.
+### Codex
 
-## Install as a Codex plugin source
+[Add Structured VibeCoding marketplace](codex://plugins/marketplace/add?url=https%3A%2F%2Fgithub.com%2Fhi-mundo%2Fstructured-vibecoding-plugins.git)
+
+Then install **Review I2B** and/or **VibeCoding Protector** in the plugin browser.
+
+### Claude Code
 
 ```bash
-git clone https://github.com/hi-mundo/awesome-vibecoding-plugins.git
-codex plugin marketplace add /absolute/path/to/awesome-vibecoding-plugins
-codex plugin add intent-to-behavior-review@awesome-vibecoding-plugins
+claude plugin marketplace add hi-mundo/structured-vibecoding-plugins
+claude plugin install review-i2b@structured-vibecoding-plugins
+claude plugin install vibecoding-protector@structured-vibecoding-plugins
 ```
 
-The marketplace identifier is `awesome-vibecoding-plugins`, as declared in `.agents/plugins/marketplace.json`.
+## Architecture
 
-## Repository shape
+`shared/structured-vibecoding/` is the canonical home for reusable contracts, methodology, templates, Python utilities, and tests. `scripts/sync_shared.py` materializes verified copies inside each plugin because Codex and Claude install plugin packages in isolation.
 
 ```text
-.agents/plugins/marketplace.json
-plugins/
-  intent-to-behavior-review/
-    .codex-plugin/plugin.json
-    skills/
-      intent-to-behavior-review/
-        SKILL.md
-        agents/openai.yaml
-        references/
-    scripts/
-codex/   # legacy prompt/reference material
-shared/  # legacy shared patterns
-warp/    # legacy Warp notes
+shared/structured-vibecoding/   canonical reusable source
+plugins/review-i2b/             installable intent-to-behavior review
+plugins/vibecoding-protector/   installable development guardrails
+codex/, warp/, shared/*.md      reference-only legacy notes
 ```
 
-New distributable work belongs under `plugins/`. The existing `codex/`, `shared/`, and `warp/` documents are retained as reference material; they are not advertised as installable plugins.
+The layers are intentionally distinct:
 
-## Plugin quality bar
+- **Plugin:** distributable package.
+- **Skill:** agent workflow inside a plugin.
+- **Contract:** deterministic machine-readable rules.
+- **Script:** executable preflight or validation.
+- **Reference:** methodology and evidence; never an executable gate.
+- **Generated artifact:** project-local model or ledger such as `STRUCTURE.md` and `.decisions.jsonl`.
 
-- State the behavior and boundaries the plugin owns.
-- Keep failure states visible; never fabricate success.
-- Prefer local, deterministic helpers for repeated mechanical work.
-- Keep product and domain decisions with the user.
-- Include focused validation for scripts and manifests.
-- Document external references and known methodological limits.
+## Development
 
-## License
+```bash
+python3 scripts/sync_shared.py
+python3 scripts/sync_shared.py --check
+python3 -m unittest discover shared/structured-vibecoding/tests
+```
 
-MIT.
+See [AGENTS.md](AGENTS.md) for repository rules and `shared/structured-vibecoding/references/` for published methodological foundations.

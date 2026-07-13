@@ -1,0 +1,9 @@
+{
+  "name": "structured-vibecoding-plugins",
+  "owner": {"name": "Raimundo"},
+  "metadata": {"description": "Professional guardrails and intent-level review for structured vibe coding."},
+  "plugins": [
+    {"name":"review-i2b","source":"./plugins/review-i2b","description":"Review intended behavior against actual behavior."},
+    {"name":"vibecoding-protector","source":"./plugins/vibecoding-protector","description":"Human-owned architecture and clean-slice development gates."}
+  ]
+}

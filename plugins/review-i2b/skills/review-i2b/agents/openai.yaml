@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review I2B"
+  short_description: "Compare intended and actual behavior"
+  default_prompt: "Use $review-i2b to reconstruct intent, inspect at least three relevant revisions, compare behavior, and report purpose-level defects with evidence."

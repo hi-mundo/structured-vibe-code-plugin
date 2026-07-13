@@ -1,0 +1,23 @@
+{
+  "name": "vibecoding-protector",
+  "version": "0.1.0",
+  "description": "Deterministic preflight and human-owned architecture gates for clean, modeled, one-slice-at-a-time AI-assisted development.",
+  "author": {"name": "Raimundo", "url": "https://github.com/hi-mundo"},
+  "homepage": "https://github.com/hi-mundo/structured-vibecoding-plugins/tree/main/plugins/vibecoding-protector",
+  "repository": "https://github.com/hi-mundo/structured-vibecoding-plugins",
+  "license": "MIT",
+  "keywords": ["guardrails", "architecture", "preflight", "vibecoding"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "VibeCoding Protector",
+    "shortDescription": "Model, decide, slice, validate, commit",
+    "longDescription": "Model the repository, keep architecture decisions human-owned, and execute one clean, risk-validated, explicitly committed slice at a time.",
+    "developerName": "Raimundo",
+    "category": "Developer Tools",
+    "capabilities": ["Read", "Write", "Execute"],
+    "defaultPrompt": ["Preflight and model this repository.", "Prepare one safe implementation slice.", "Check this work for architecture drift."],
+    "brandColor": "#047857",
+    "composerIcon": "./assets/icon.svg",
+    "logo": "./assets/icon.svg"
+  }
+}

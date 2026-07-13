@@ -1,0 +1,4 @@
+interface:
+  display_name: "VibeCoding Protector"
+  short_description: "Human-owned architecture, one clean slice"
+  default_prompt: "Use $vibecoding-protector to preflight this repository, model it in STRUCTURE.md, surface architecture decisions for me, and gate one coherent implementation slice."

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "id": "vibecoding-protector/v1",
+  "artifacts": {
+    "structure": "STRUCTURE.md",
+    "decision_log": ".decisions.jsonl",
+    "current_slice": ".vibecoding/current-slice.json",
+    "decision_ledger": ".vibecoding/decision-ledger.json",
+    "preflight": ".vibecoding/preflight.json",
+    "validation": ".vibecoding/validation.json"
+  },
+  "required_structure_sections": ["Purpose and users", "Capabilities", "Entrypoints", "Modules and ownership", "Contracts and dependencies", "State, persistence, and side effects", "Invariants", "Failure surfaces", "Bug model", "Risk and required tests", "Slice boundaries", "Human decisions", "Uncertainty"],
+  "gates": ["PRE001_DIRTY_WORKTREE", "PRE002_RULES_NOT_LOADED", "MODEL001_STRUCTURE_MISSING", "MODEL002_STRUCTURE_STALE", "DEC001_PENDING_DECISIONS", "DEC002_CRITIQUE_UNRESOLVED", "SCOPE001_NO_ACTIVE_SLICE", "SCOPE002_MULTIPLE_SCOPES", "VAL001_REQUIRED_CHECK_MISSING", "VAL002_FAILED_CHECK", "COMMIT001_AUTH_REQUIRED", "COMMIT002_SLICE_UNCOMMITTED", "DRIFT001_CONTEXT_DRIFT"]
+}

@@ -1,0 +1,39 @@
+---
+name: vibecoding-protector
+description: Guard AI-assisted software work with a clean-worktree preflight, repository and bug modeling in STRUCTURE.md, human-owned architecture decisions, explicit critique, one coherent slice at a time, risk-derived validation, decision-memory checks, and user-authorized commits. Use before implementing features, fixes, refactors, or architecture changes when context drift, dirty worktrees, misplaced ownership, accidental complexity, or AI-made technical decisions are risks.
+---
+
+# VibeCoding Protector
+
+Act as the operational engineer. The human remains product owner, tech lead, and decision authority.
+
+## Gate the work
+
+1. Read every applicable `AGENTS.md`, repository documentation, manifests, CI and test commands. Run `../../scripts/protector_preflight.py --repo .`. A dirty worktree blocks a new slice; never discard or absorb user changes.
+2. Create or update root `STRUCTURE.md` from repository evidence. Include purpose, users, capabilities, entrypoints, modules and symbol ownership, dependency directions, state and side effects, contracts, invariants, failure surfaces, bug model, module risk, required tests, slice boundaries, base commit, and uncertainty.
+3. Inspect root `.decisions.jsonl` before recommending an approach. Review I2B owns that log; this plugin consumes it. Exact repeats of rejected or failed approaches require human override. Similarity inferred by an LLM is advisory only.
+4. Interview the human about every material technical decision: desired outcome, architecture style, domain boundary, folder/file ownership, state lifecycle, complexity budget, and whether the right result is a service, module, class, function, script, configuration, documentation, or no code.
+5. Critique the selected solution with concrete tradeoffs and safer options. Wait for the human to accept, adjust, or reject the critique. Record the decision before implementation. Never silently choose architecture, behavior, data contracts, persistence, security, or observability.
+6. Define exactly one coherent slice in `.vibecoding/current-slice.json`. Scope is behavioral or contractual, never a file-count quota. Reject unrelated changes and context drift.
+7. Implement only the approved slice. Validate with the risk-derived checks named in `STRUCTURE.md`, including a meaningful behavior and failure check. Review the diff.
+8. Report results and request explicit commit authorization. Commit only after authorization, record the commit in `.decisions.jsonl`, and confirm the worktree is clean before starting another slice.
+
+Read [references/guardrail-contract.md](references/guardrail-contract.md) for failure codes. The methodology and reusable contracts are vendored from the repository-level `shared/structured-vibecoding/` source; they guide evidence but do not replace human decisions.
+
+## Stop immediately when
+
+- the worktree contains unexplained or overlapping changes;
+- `STRUCTURE.md` is absent or stale and cannot be safely reconstructed;
+- a product or architecture decision remains implicit;
+- critique is unresolved;
+- more than one coherent scope is active;
+- required validation failed or was not run;
+- commit authorization is absent;
+- repository reality contradicts the model.
+
+## Deterministic helpers
+
+```bash
+python3 ../../scripts/protector_preflight.py --repo .
+python3 ../../scripts/decision_log.py --file .decisions.jsonl --check
+```

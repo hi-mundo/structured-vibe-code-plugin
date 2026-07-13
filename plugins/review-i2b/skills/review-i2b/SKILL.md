@@ -1,9 +1,9 @@
 ---
-name: intent-to-behavior-review
-description: Review software for semantic, functional, domain, module, and logic defects by reconstructing intended behavior before inspecting actual behavior, comparing both through an explicit behavioral model, examining at least three relevant historical revisions, and collecting reproducible evidence. Use for deep repository reviews, scoped feature reviews, branch/commit comparisons, suspicious behavior that may succeed technically while failing its purpose, vibe-coded applications, or requests to use isolated mimic probes. This skill may propose or run approved tests, but it is not a test runner or a substitute for product intent.
+name: review-i2b
+description: Review software for semantic, functional, domain, module, and logic defects by reconstructing intended behavior before inspecting actual behavior, comparing both through an explicit behavioral model, examining at least three relevant historical revisions, and collecting reproducible evidence. Use for deep repository reviews, scoped feature reviews, branch or commit comparisons, suspicious successful-but-wrong behavior, vibe-coded applications, decision-history checks, or isolated mimic probes. This skill may trigger approved tests, but it is not a test runner or a substitute for product intent.
 ---
 
-# Intent-to-Behavior Review
+# Review I2B — Intent to Behavior
 
 Review whether software fulfills its purpose, including cases that return success, raise no exception, or pass narrow tests.
 
@@ -29,6 +29,7 @@ If the scope is not explicit and an interactive planning/question tool is availa
 ## Run the review
 
 1. **Preflight the repository.** Read applicable `AGENTS.md`, project documentation, manifests, schemas, test configuration, and working-tree state. Run `../../scripts/review_preflight.py` when Git is available. Stop on an invalid reference, missing scope, dirty overlap, or fewer than three reachable revisions unless the limitation is reported and the user accepts it.
+   Also inspect root `.decisions.jsonl` for relevant domain/path history. Before proposing an approach, use the deterministic decision helper; an exact fingerprint matching a rejected or failed approach is blocked until the human explicitly overrides it. Semantic similarity is advisory and must never block by model judgment alone.
 2. **Map the application context.** Identify users, jobs, entry points, domain boundaries, state, external effects, invariants, permissions, and failure signals. Keep this map proportional to the selected mode.
 3. **Model intended behavior.** Build an intent model from evidence that does not depend solely on current code. Express actor, trigger, preconditions, inputs, state transition, output, side effects, invariants, forbidden outcomes, and observability. Use [references/behavior-model.md](references/behavior-model.md).
 4. **Inspect at least three revisions.** For every material path, inspect the current revision plus at least two earlier relevant revisions using `git log`, `git show`, and line history where appropriate. Follow renames. Explain whether behavior is stable, intentionally evolved, regressed, or ambiguous. Use [references/history-and-blame.md](references/history-and-blame.md); never treat blame as proof of causality.
@@ -56,6 +57,7 @@ For Python callables, use `../../scripts/mimic_python.py` only after reviewing t
 python3 ../../scripts/review_preflight.py --repo . --mode scoped --scope path/to/feature --revisions 3
 python3 ../../scripts/mimic_python.py --repo . --module package.module --call function --args-json '[1]' --kwargs-json '{}' --expected-json '2' --allow-execution
 python3 ../../scripts/validate_report.py path/to/review.json
+python3 ../../scripts/decision_log.py --file .decisions.jsonl --check
 ```
 
 The helpers emit JSON, use only the Python standard library, and fail visibly. They do not establish product intent or confirm a defect by themselves.
