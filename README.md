@@ -1,86 +1,63 @@
 # Structured VibeCoding Plugins
 
-Professional controls for AI-assisted development: understand purpose before judging code, keep architecture decisions with the human, model the repository, and finish one validated scope at a time.
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
-[![Codex marketplace](https://img.shields.io/badge/Codex-marketplace-111827.svg)](codex://plugins/marketplace/add?url=https%3A%2F%2Fgithub.com%2Fhi-mundo%2Fstructured-vibecoding-plugins.git)
-[![Claude marketplace](https://img.shields.io/badge/Claude-copy%20commands-d97706.svg)](#claude-code)
-
 ## Plugins
 
-| Plugin | What it controls | What it is not |
-|---|---|---|
-| **Review I2B** | Reconstructs intended behavior, examines at least three relevant revisions, compares actual behavior, runs focused mimic probes when justified, and maintains `.decisions.jsonl`. | A generic test runner or an exception scanner. |
-| **VibeCoding Protector** | Models the repository in `STRUCTURE.md`, makes architecture choices explicit and human-owned, gates a single coherent slice, validation, commit authorization, and clean worktree. | An autonomous architect or a file-count commit bot. |
+| Plugin | Contract |
+|---|---|
+| `structured-vibecoding` | Repository preflight, decision recovery, human-owned architecture, closed execution slices, execution backlog, and Review I2B before commit. |
 
 ## Install
 
 ### Codex
 
-[Add Structured VibeCoding marketplace](codex://plugins/marketplace/add?url=https%3A%2F%2Fgithub.com%2Fhi-mundo%2Fstructured-vibecoding-plugins.git)
-
-Then install **Review I2B** and/or **VibeCoding Protector** in the plugin browser.
-
-### Make VibeCoding Protector the repository default
-
-After installing the plugin, add its activation contract to the target repository's `AGENTS.md`:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/hi-mundo/structured-vibecoding-plugins/main/scripts/enable-protector.sh | sh
-```
-
-The command is idempotent: running it again replaces the managed block instead of duplicating it. It makes `$vibecoding-protector` the default workflow for implementation, fixes, refactors, and architecture work, and requires active turns to begin with:
-
-*VibeCode Protector enabled*
-
-For an auditable installation, download and inspect the script first:
-
-```bash
-curl -fsSLO https://raw.githubusercontent.com/hi-mundo/structured-vibecoding-plugins/main/scripts/enable-protector.sh
-less enable-protector.sh
-sh enable-protector.sh
-```
-
-Pass a path to target another instruction file:
-
-```bash
-sh enable-protector.sh path/to/AGENTS.md
-```
+[Add marketplace](codex://plugins/marketplace/add?url=https%3A%2F%2Fgithub.com%2Fhi-mundo%2Fstructured-vibecoding-plugins.git)
 
 ### Claude Code
 
 ```bash
 claude plugin marketplace add hi-mundo/structured-vibecoding-plugins
-claude plugin install review-i2b@structured-vibecoding-plugins
-claude plugin install vibecoding-protector@structured-vibecoding-plugins
+claude plugin install structured-vibecoding@structured-vibecoding-plugins
 ```
 
-## Architecture
+## Make VibeCoding Protector the default
 
-`shared/structured-vibecoding/` is the canonical home for reusable contracts, methodology, templates, Python utilities, and tests. `scripts/sync_shared.py` materializes verified copies inside each plugin because Codex and Claude install plugin packages in isolation.
+Copy this block into the repository instruction file used by your code agent, such as `AGENTS.md` or `CLAUDE.md`:
 
-```text
-shared/structured-vibecoding/   canonical reusable source
-plugins/review-i2b/             installable intent-to-behavior review
-plugins/vibecoding-protector/   installable development guardrails
-codex/, warp/, shared/*.md      reference-only legacy notes
+```md
+## VibeCode Protector
+
+Use the installed `$structured-vibecoding` workflow for implementation, bug
+fixes, refactoring, code review, test execution, repository investigation, and
+architectural decisions.
+
+At the beginning of every active turn, write:
+
+*VibeCode Protector enabled*
+
+Before acting, provide a concise technical checkback containing:
+
+- objective understood;
+- scope and affected files or modules;
+- intended behavioral change and mechanism;
+- validation and failure checks;
+- risks, exclusions, and decisions requiring human confirmation.
+
+Do not make product, architecture, domain, persistence, security, observability,
+or contract decisions on the user's behalf. Present concrete options,
+tradeoffs, and a recommendation, then wait for the user's decision.
+
+Before editing a concrete block, show the proposed patch or exact before/after
+text. Work on one coherent scope at a time. Do not start a new scope with an
+unexplained dirty worktree.
 ```
 
-The layers are intentionally distinct:
+The plugins do not edit or persist agent instruction files.
 
-- **Plugin:** distributable package.
-- **Skill:** agent workflow inside a plugin.
-- **Contract:** deterministic machine-readable rules.
-- **Script:** executable preflight or validation.
-- **Reference:** methodology and evidence; never an executable gate.
-- **Generated artifact:** project-local model or ledger such as `STRUCTURE.md` and `.decisions.jsonl`.
-
-## Development
+## Validate
 
 ```bash
-python3 scripts/sync_shared.py
 python3 scripts/sync_shared.py --check
 python3 -m unittest discover shared/structured-vibecoding/tests
+python3 /path/to/plugin-creator/scripts/validate_plugin.py plugins/structured-vibecoding
+git diff --check
 ```
-
-See [AGENTS.md](AGENTS.md) for repository rules and `shared/structured-vibecoding/references/` for published methodological foundations.

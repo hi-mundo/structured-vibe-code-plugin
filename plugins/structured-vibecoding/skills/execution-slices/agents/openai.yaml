@@ -1,0 +1,4 @@
+interface:
+  display_name: "Execution Slices"
+  short_description: "One closed scope, then validate and commit"
+  default_prompt: "Use $execution-slices to define one closed scope, backlog additional discoveries, implement only the approved slice, and gate its commit."

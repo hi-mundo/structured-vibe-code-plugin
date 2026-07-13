@@ -1,0 +1,4 @@
+interface:
+  display_name: "Structured VibeCoding"
+  short_description: "Preflight, closed slices, I2B, commit"
+  default_prompt: "Use $structured-vibecoding to model this repository, recover decisions, execute one closed slice, validate it with Review I2B, and gate the commit."

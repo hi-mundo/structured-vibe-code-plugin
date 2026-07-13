@@ -2,9 +2,9 @@
 
 ## Project layout
 
-- `plugins/`: independently installable Codex and Claude plugins.
+- `plugins/structured-vibecoding/`: installable workflow containing preflight, execution gates, and Review I2B skills.
 - `shared/structured-vibecoding/`: canonical reusable contracts, references, templates, Python runtime, and tests.
-- `scripts/sync_shared.py`: materializes and verifies canonical shared files in plugin packages.
+- `scripts/sync_shared.py`: copies and verifies only the shared helpers required by each plugin.
 - `codex/`, `shared/*.md`, `warp/`: legacy reference-only documentation; not plugins.
 
 ## Build, test, and lint
@@ -16,8 +16,8 @@
 
 ## Architecture and boundaries
 
-- Shared source is canonical. Never edit `plugins/*/vendor/structured-vibecoding/` directly.
-- A plugin must remain usable when installed from an isolated cache.
+- Shared utilities are canonical. Edit copied plugin helpers only through their source under `shared/structured-vibecoding/utils/`.
+- The plugin must remain usable when installed from an isolated cache.
 - Deterministic scripts emit JSON and nonzero exit codes on blocked states.
 - References guide analysis; they do not act as runtime guardrails or proof.
 

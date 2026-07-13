@@ -2,7 +2,6 @@
   "name": "structured-vibecoding-plugins",
   "interface": {"displayName": "Structured VibeCoding Plugins"},
   "plugins": [
-    {"name":"review-i2b","source":{"source":"local","path":"./plugins/review-i2b"},"policy":{"installation":"AVAILABLE","authentication":"ON_INSTALL"},"category":"Developer Tools"},
-    {"name":"vibecoding-protector","source":{"source":"local","path":"./plugins/vibecoding-protector"},"policy":{"installation":"AVAILABLE","authentication":"ON_INSTALL"},"category":"Developer Tools"}
+    {"name":"structured-vibecoding","source":{"source":"local","path":"./plugins/structured-vibecoding"},"policy":{"installation":"AVAILABLE","authentication":"ON_INSTALL"},"category":"Developer Tools"}
   ]
 }

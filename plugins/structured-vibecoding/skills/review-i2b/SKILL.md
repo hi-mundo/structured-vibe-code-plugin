@@ -36,6 +36,7 @@ If the scope is not explicit and an interactive planning/question tool is availa
 5. **Model actual behavior.** Trace control flow, data flow, state transitions, contracts, error paths, retries, fallbacks, logs, and user-visible outcomes. Include successful-but-wrong paths.
 6. **Compare intent with behavior.** Create explicit mismatches: violated invariant, missing transition, incorrect output, unintended side effect, domain leakage, inconsistent sibling path, invisible failure, or unreachable purpose.
 7. **Collect the smallest decisive evidence.** Prefer static proof when sufficient. Otherwise use existing targeted tests, a direct import probe, a mimic probe, or a narrow runtime check. Obtain approval before commands that mutate state, install dependencies, call external systems, or execute untrusted project code.
+   For runtime validation, use the applicable contracts, start the local service when required, issue real local API requests, and observe responses, state, side effects, and logs together. A successful request or absence of exceptions is not proof of correct behavior.
 8. **Classify and calibrate.** Use [references/defect-taxonomy.md](references/defect-taxonomy.md). Report confidence separately from severity. A plausible hypothesis is not a confirmed defect.
 9. **Report findings first.** Include exact locations, intent evidence, observed behavior, historical evidence, reproduction/probe, impact, confidence, and remediation direction. Include unanswered questions and validation gaps.
 
@@ -61,6 +62,12 @@ python3 ../../scripts/decision_log.py --file .decisions.jsonl --check
 ```
 
 The helpers emit JSON, use only the Python standard library, and fail visibly. They do not establish product intent or confirm a defect by themselves.
+
+## Preserve the automated-test boundary
+
+Review I2B performs agent-driven behavioral validation before commit. It may create temporary probes, import real functions, invoke libraries, start local services, issue local API requests, inspect state, observe logs, and run existing automated tests when they provide relevant evidence.
+
+Do not add or modify permanent unit, integration, contract, regression, or end-to-end tests during Review I2B. Permanent test implementation is regular Codex implementation work and requires its own approved closed slice. When such a test is missing, add it to `.vibecoding/execution-backlog.json` and report the evidence gap.
 
 ## Stop conditions
 
