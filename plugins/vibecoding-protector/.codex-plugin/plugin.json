@@ -1,6 +1,6 @@
 {
   "name": "vibecoding-protector",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Deterministic preflight and human-owned architecture gates for clean, modeled, one-slice-at-a-time AI-assisted development.",
   "author": {"name": "Raimundo", "url": "https://github.com/hi-mundo"},
   "homepage": "https://github.com/hi-mundo/structured-vibecoding-plugins/tree/main/plugins/vibecoding-protector",

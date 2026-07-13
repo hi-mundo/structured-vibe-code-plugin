@@ -25,6 +25,8 @@ def main() -> int:
             (vendor / "MANIFEST.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
             for name in ("decision_log.py", "protector_preflight.py"):
                 shutil.copy2(SHARED / "utils" / name, plugin / "scripts" / name)
+            if plugin.name == "vibecoding-protector":
+                shutil.copy2(ROOT / "scripts" / "enable-protector.sh", plugin / "scripts" / "enable-protector.sh")
         current = {str(p.relative_to(vendor)): digest(p) for p in vendor.rglob("*") if p.is_file() and p.name != "MANIFEST.json"} if vendor.exists() else {}
         if current != manifest: drift.append(plugin.name)
     print(json.dumps({"ok": not drift, "shared_files": len(manifest), "drift": drift}))

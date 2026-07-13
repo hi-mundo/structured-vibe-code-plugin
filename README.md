@@ -21,6 +21,32 @@ Professional controls for AI-assisted development: understand purpose before jud
 
 Then install **Review I2B** and/or **VibeCoding Protector** in the plugin browser.
 
+### Make VibeCoding Protector the repository default
+
+After installing the plugin, add its activation contract to the target repository's `AGENTS.md`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hi-mundo/structured-vibecoding-plugins/main/scripts/enable-protector.sh | sh
+```
+
+The command is idempotent: running it again replaces the managed block instead of duplicating it. It makes `$vibecoding-protector` the default workflow for implementation, fixes, refactors, and architecture work, and requires active turns to begin with:
+
+*VibeCode Protector enabled*
+
+For an auditable installation, download and inspect the script first:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/hi-mundo/structured-vibecoding-plugins/main/scripts/enable-protector.sh
+less enable-protector.sh
+sh enable-protector.sh
+```
+
+Pass a path to target another instruction file:
+
+```bash
+sh enable-protector.sh path/to/AGENTS.md
+```
+
 ### Claude Code
 
 ```bash
