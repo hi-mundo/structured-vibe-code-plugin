@@ -1,26 +1,44 @@
 # Repository Instructions
 
-## Project layout
+This repository is one plugin, `vibecode` (Structured Vibe Code), for Claude Code and Codex. The repository is also its own single-plugin marketplace.
 
-- `plugins/structured-vibecoding/`: installable workflow containing preflight, execution gates, and Review I2B skills.
-- `shared/structured-vibecoding/`: canonical reusable contracts, references, templates, Python runtime, and tests.
-- `scripts/sync_shared.py`: copies and verifies only the shared helpers required by each plugin.
-- `codex/`, `shared/*.md`, `warp/`: legacy reference-only documentation; not plugins.
+## Commands the plugin exposes
 
-## Build, test, and lint
+| Command | Effect |
+|---|---|
+| `/vibecode init` | create `.vibecoding/`, `STRUCTURE.md`, `.decisions.jsonl`, gitignore entry |
+| `/vibecode understand` | map repository and history into `.vibecoding/understanding.md` |
+| `/vibecode enable` / `disable` | active mode on/off, stored in `.vibecoding/state.json` |
+| `/vibecode status` | mode, slice, allowances |
+| `/vibecode allow <scope> --until <date>` | scoped, dated permission for autonomous implementation |
+| `/vibecode allowances` | list grants |
 
-- Sync package copies: `python3 scripts/sync_shared.py`
-- Verify no shared drift: `python3 scripts/sync_shared.py --check`
-- Unit tests: `python3 -m unittest discover shared/structured-vibecoding/tests`
-- Compile Python: `python3 -m compileall shared plugins scripts`
+`commands/vibecode.md` dispatches on `$ARGUMENTS`. `hooks/prompt_submit.py` also parses `enable|disable` and writes the state deterministically.
 
-## Architecture and boundaries
+## Layout
 
-- Shared utilities are canonical. Edit copied plugin helpers only through their source under `shared/structured-vibecoding/utils/`.
-- The plugin must remain usable when installed from an isolated cache.
-- Deterministic scripts emit JSON and nonzero exit codes on blocked states.
-- References guide analysis; they do not act as runtime guardrails or proof.
+- `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `.codex-plugin/plugin.json`: manifests. Keep `version` identical in both plugin manifests.
+- `commands/`: one thin command file.
+- `hooks/`: `hooks.json` (Claude Code), `codex-hooks.json`, `session_start.py`, `prompt_submit.py`. Hooks read the ruleset from `skills/vibecode/SKILL.md` under the heading `## Active mode rules`; do not rename that heading.
+- `skills/`: `vibecode` (loop), `asking` (decision protocol), `understand` (history), `execution-slices` (scope gates), `review-i2b` (behavioral review). Each has `agents/openai.yaml` for Codex.
+- `scripts/`: Python 3.9+ standard library. `vibecode_state.py` is imported by the others and by the hooks; keep it dependency-free.
+- `contracts/`, `references/`, `templates/`: schemas, methodology, `STRUCTURE.md` template.
+- `tests/`: `unittest`.
+- `docs/legacy/`: unrelated historical notes (local OpenAI-compatible proxies). Not part of the plugin.
+
+## Build, test, lint
+
+- `python3 -m unittest discover tests`
+- `python3 -m compileall -q scripts hooks`
+- `git diff --check`
+
+## Rules for changes here
+
+- Skills reference scripts as `<plugin>/scripts/...`; in Claude Code `<plugin>` is `${CLAUDE_PLUGIN_ROOT}`, otherwise two directories above the SKILL.md.
+- Scripts print one JSON object and use the exit codes documented in `README.md`; changing a code means updating the README table and the skill that interprets it.
+- Hooks never raise, always exit 0, and must finish within 5 seconds.
+- A feature that lets the agent decide more on its own does not belong here.
 
 ## Done means
 
-- manifests parse, skills validate, shared drift check passes, tests pass, and plugin install is verified.
+Manifests parse, `unittest` passes, `compileall` passes, hooks answer the sample payloads in the README, and the plugin installs from a clean cache.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Understand"
+  short_description: "Map the repository and its history before changing it"
+  default_prompt: "Use $understand to map this repository: how it started, what it became, where it is going."

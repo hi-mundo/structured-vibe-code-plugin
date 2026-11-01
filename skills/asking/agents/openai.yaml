@@ -1,0 +1,4 @@
+interface:
+  display_name: "Asking"
+  short_description: "Context, options, recommendation, then the question"
+  default_prompt: "Use $asking to put this decision to me with options and a diff."

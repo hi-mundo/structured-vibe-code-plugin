@@ -1,0 +1,24 @@
+{
+  "name": "vibecode",
+  "version": "0.2.0",
+  "description": "AI-assisted development with the developer at the wheel: options and diffs before every change, closed slices, scoped allowances, intent-to-behavior review before commit.",
+  "author": {"name": "Raimundo", "url": "https://github.com/hi-mundo"},
+  "homepage": "https://github.com/hi-mundo/structured-vibe-code-plugin",
+  "repository": "https://github.com/hi-mundo/structured-vibe-code-plugin",
+  "license": "MIT",
+  "keywords": ["vibecoding", "human-in-the-loop", "pair-programming", "code-review", "guardrails"],
+  "skills": "./skills/",
+  "hooks": "./hooks/codex-hooks.json",
+  "interface": {
+    "displayName": "Structured Vibe Code",
+    "shortDescription": "Engine for the agent, wheel for the developer",
+    "longDescription": "Understand the repository, surface every technical decision with options and a diff, implement one closed slice at a time, honor scoped allowances, and validate intent against behavior before commit.",
+    "developerName": "Raimundo",
+    "category": "Developer Tools",
+    "capabilities": ["Read", "Write", "Execute"],
+    "defaultPrompt": ["Use $vibecode to understand this repository before we change anything.", "Use $vibecode: show me the options for this change before implementing.", "Use $review-i2b to validate this slice from intent to behavior."],
+    "brandColor": "#047857",
+    "composerIcon": "./assets/icon.svg",
+    "logo": "./assets/icon.svg"
+  }
+}

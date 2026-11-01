@@ -1,8 +1,14 @@
 {
-  "name": "structured-vibecoding-plugins",
-  "owner": {"name": "Raimundo"},
-  "metadata": {"description": "Structured AI-assisted software development and local Codex developer utilities."},
+  "name": "structured-vibe-code-plugin",
+  "owner": {"name": "Raimundo", "url": "https://github.com/hi-mundo"},
+  "metadata": {"description": "Structured Vibe Code: the agent is the engine, the developer holds the wheel."},
   "plugins": [
-    {"name":"structured-vibecoding","source":"./plugins/structured-vibecoding","description":"Repository preflight, closed slices, and intent-to-behavior validation."}
+    {
+      "name": "vibecode",
+      "source": "./",
+      "description": "Developer-decides AI pairing: options with diffs before every change, closed slices, scoped allowances, intent-to-behavior review.",
+      "category": "Developer Tools",
+      "keywords": ["vibecoding", "human-in-the-loop", "pair-programming", "guardrails", "code-review"]
+    }
   ]
 }

@@ -1,63 +1,209 @@
-# Structured VibeCoding Plugins
+<p align="center">
+  <img src="assets/banner.svg" alt="Structured Vibe Code — the agent is the engine, the developer holds the wheel" width="100%">
+</p>
 
-## Plugins
+<p align="center">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-10b981.svg"></a>
+  <img alt="Version" src="https://img.shields.io/badge/version-0.2.0-047857.svg">
+  <img alt="Claude Code plugin" src="https://img.shields.io/badge/Claude%20Code-plugin-0f172a.svg">
+  <img alt="Codex plugin" src="https://img.shields.io/badge/Codex-plugin-0f172a.svg">
+  <img alt="Python 3.9+" src="https://img.shields.io/badge/python-3.9%2B%20stdlib%20only-3776ab.svg">
+  <a href="#contributing"><img alt="PRs welcome" src="https://img.shields.io/badge/PRs-welcome-fbbf24.svg"></a>
+  <img alt="Audience" src="https://img.shields.io/badge/audience-developers-64748b.svg">
+</p>
 
-| Plugin | Contract |
+<p align="center">
+  <a href="#install">Install</a> ·
+  <a href="#commands">Commands</a> ·
+  <a href="#active-mode">Active mode</a> ·
+  <a href="#allowances">Allowances</a> ·
+  <a href="#how-a-decision-looks">How a decision looks</a> ·
+  <a href="#skills">Skills</a> ·
+  <a href="#contributing">Contributing</a>
+</p>
+
+**Structured Vibe Code** is a plugin for Claude Code and Codex that keeps the developer in charge while the agent does the work. The agent reads, searches, types, tests and comes back after every step with *what now?* and the options already laid out, with diffs. It never implements a whole module on its own unless you granted a scoped, dated allowance for exactly that.
+
+Engine: the agent. Wheel: you.
+
+## Who this is for
+
+- Developers who use AI agents daily and are tired of reviewing 400-line diffs they did not ask for.
+- Teams that want AI speed without losing the thread of *why* the code looks the way it does.
+- Anyone maintaining a vibe-coded codebase who needs to understand it before touching it.
+
+**Not recommended** for people without a technical background. The plugin is deliberately technical: it talks in diffs, contracts, failure modes and exit codes, and it expects you to make the calls. If you want an agent that decides for you, this is the wrong tool.
+
+## Why
+
+Vibe coding is fast and it ships code nobody understands. The usual fixes (more prompts, more review, more tests after the fact) do not change the dynamic: the agent still decides, you still catch up. This plugin flips it.
+
+| Default agent behavior | With Structured Vibe Code |
 |---|---|
-| `structured-vibecoding` | Repository preflight, decision recovery, human-owned architecture, closed execution slices, execution backlog, and Review I2B before commit. |
+| Picks an approach and implements it | Shows the current code, 2 to 4 options with before/after, a recommendation, then asks |
+| Expands scope when it finds related work | Puts it in `.vibecoding/execution-backlog.json` and keeps the slice closed |
+| Rewrites a module because you said "improve it" | Refuses open scopes; asks for a bounded outcome or a dated allowance |
+| Asks "should I proceed?" with no context | Never asks without showing what it saw first (the `asking` skill) |
+| Commits when it thinks it is done | Commits on explicit yes, after showing diff and validation |
+| Starts coding in a repo it has never read | `/vibecode understand` reads the history in chunks first |
 
 ## Install
-
-### Codex
-
-[Add marketplace](codex://plugins/marketplace/add?url=https%3A%2F%2Fgithub.com%2Fhi-mundo%2Fstructured-vibecoding-plugins.git)
 
 ### Claude Code
 
 ```bash
-claude plugin marketplace add hi-mundo/structured-vibecoding-plugins
-claude plugin install structured-vibecoding@structured-vibecoding-plugins
+claude plugin marketplace add hi-mundo/structured-vibe-code-plugin
 ```
-
-## Make VibeCoding Protector the default
-
-Copy this block into the repository instruction file used by your code agent, such as `AGENTS.md` or `CLAUDE.md`:
-
-```md
-## VibeCode Protector
-
-Use the installed `$structured-vibecoding` workflow for implementation, bug
-fixes, refactoring, code review, test execution, repository investigation, and
-architectural decisions.
-
-At the beginning of every active turn, write:
-
-*VibeCode Protector enabled*
-
-Before acting, provide a concise technical checkback containing:
-
-- objective understood;
-- scope and affected files or modules;
-- intended behavioral change and mechanism;
-- validation and failure checks;
-- risks, exclusions, and decisions requiring human confirmation.
-
-Do not make product, architecture, domain, persistence, security, observability,
-or contract decisions on the user's behalf. Present concrete options,
-tradeoffs, and a recommendation, then wait for the user's decision.
-
-Before editing a concrete block, show the proposed patch or exact before/after
-text. Work on one coherent scope at a time. Do not start a new scope with an
-unexplained dirty worktree.
-```
-
-The plugins do not edit or persist agent instruction files.
-
-## Validate
 
 ```bash
-python3 scripts/sync_shared.py --check
-python3 -m unittest discover shared/structured-vibecoding/tests
-python3 /path/to/plugin-creator/scripts/validate_plugin.py plugins/structured-vibecoding
-git diff --check
+claude plugin install vibecode@structured-vibe-code-plugin
 ```
+
+### Codex
+
+[Add marketplace](codex://plugins/marketplace/add?url=https%3A%2F%2Fgithub.com%2Fhi-mundo%2Fstructured-vibe-code-plugin.git), then install `vibecode`. Skills are available as `$vibecode`, `$asking`, `$understand`, `$execution-slices`, `$review-i2b`.
+
+No npm, no pip. Scripts are Python 3.9+ standard library.
+
+## Commands
+
+All optional. They make the plugin easier to work with; the skills work without them.
+
+| Command | What it does |
+|---|---|
+| `/vibecode init` | Creates `.vibecoding/`, `STRUCTURE.md`, `.decisions.jsonl` and adds `.vibecoding/` to `.gitignore`. Never overwrites. |
+| `/vibecode understand` | Maps the repository: reads `git log` in chronological chunks, writes `.vibecoding/understanding.md` (how it started, what it became, where it is going), refreshes `STRUCTURE.md`. |
+| `/vibecode enable` | Turns on **active mode** for this repository. |
+| `/vibecode disable` | Turns it off. State lives in `.vibecoding/state.json`, per repository. |
+| `/vibecode status` | Mode, current slice, valid allowances. |
+| `/vibecode allow <scope> --until <YYYY-MM-DD> [--note "..."]` | Grants permission for autonomous implementation inside `<scope>` (path or glob) until the date. |
+| `/vibecode allowances` | Lists grants, expiry and days left. |
+
+## Active mode
+
+When enabled, a hook injects the ruleset at session start and reminds it on every turn, so it does not drift out of the agent's attention after a long session. The three rules:
+
+1. **Show before you ask, ask before you act.** Current code, options with before/after, recommendation, then the question. A bare question is a violation.
+2. **Never implement a whole module alone.** Anything bigger than one closed slice needs a valid allowance covering those paths.
+3. **Come back after every step.** Diff, validation, what was noticed outside the slice, next options. Commit only on explicit yes.
+
+Within those rules the agent is free to be fast: it reads, greps, runs tests, writes the slice you approved, and does not ask you for facts it can find in the repository.
+
+## Allowances
+
+Sometimes you *do* want the agent to build a whole module while you do something else. That is a decision, so it is recorded as one:
+
+```bash
+/vibecode allow src/billing/ --until 2026-12-01 --note "rebuild invoice generation, keep the public API"
+```
+
+This writes `.vibecoding/allowances/2026-11-01-src-billing-a1b2c3.json`:
+
+```json
+{
+  "id": "2026-11-01-src-billing-a1b2c3",
+  "scope": "src/billing/",
+  "granted_at": "2026-11-01T20:14:27+00:00",
+  "expires_at": "2026-12-01",
+  "granted_by": "raimundo",
+  "note": "rebuild invoice generation, keep the public API"
+}
+```
+
+Before a module-sized slice the agent runs `allowance.py check --path <path>`. Exit `0`: covered, it shows the allowance id and goes. Exit `1` (not covered) or `3` (expired): it stops and offers `/vibecode allow` as one of the options. Allowances are local files, gitignored, per developer.
+
+## How a decision looks
+
+The `asking` skill fixes the shape of every decision request: **current code → options with before/after → recommendation → question**. Rendering picks the best thing the host offers:
+
+- **HTML widget** when the host can render one: option cards side by side, each with its diff and a button that sends the choice back. Flows are drawn, not described.
+- **Native question tool** with the recommended option first and the before/after in previews.
+- **Plain text** with numbered options and fenced diffs, ending at the question.
+
+Plain-text example:
+
+> **Now** (`server.py:23`):
+> ```python
+> DB_PATH = Path(os.environ.get("LAR_DB", BASE / "data" / "lar.db"))
+> ```
+> **Options**
+> 1. **Keep env var, add CLI flag** — `--db` overrides `LAR_DB`. Two knobs, both documented.
+> 2. **Config file** — `config.toml` next to the binary. Adds a parse step and a file to ship.
+> 3. **Defer** — leave as is; revisit when a second setting appears.
+>
+> → **1.** Smallest change, matches how the server is already started.
+>
+> Which one?
+
+## What it creates in your repository
+
+```text
+STRUCTURE.md                        repository model          committed
+.decisions.jsonl                    decision memory           committed
+.vibecoding/                        everything below          gitignored
+  state.json                        active | off
+  allowances/*.json                 scoped, dated grants
+  current-slice.json                the one thing being done now
+  execution-backlog.json            noticed, not done
+  understanding.md                  output of /vibecode understand
+  i2b-validation.json               last review-i2b result
+```
+
+## Skills
+
+| Skill | Role | Invoked |
+|---|---|---|
+| `vibecode` | The loop: preflight, decisions, closed slice, allowance gate, implement, validate, report | by the agent in active mode, or `$vibecode` |
+| `asking` | The decision protocol and its renderings | by every other skill when a human call is needed |
+| `understand` | Repository and history mapping in chunks | `/vibecode understand` |
+| `execution-slices` | Scope gates: what counts as a closed slice, what goes to the backlog | inside the loop |
+| `review-i2b` | Intent-to-behavior review before commit: reconstruct intended behavior, inspect at least three revisions, collect reproducible evidence | inside the loop, or `$review-i2b` |
+
+## Scripts
+
+Standard library only, one JSON object on stdout, meaningful exit codes. The skills tell the agent what each code means; nonzero is information for you, not an obstacle for the agent to route around.
+
+| Script | Purpose | Exit codes |
+|---|---|---|
+| `scripts/vibecode_init.py` | create support files | 0 |
+| `scripts/vibecode_state.py get\|set active\|off` | mode switch | 0 |
+| `scripts/allowance.py grant\|check\|list\|revoke` | scoped permissions | 0 covered · 1 not · 2 usage · 3 expired |
+| `scripts/history_chunks.py` | chronological history chunks | 0 · 1 too short · 2 git failed |
+| `scripts/protector_preflight.py` | worktree, model, decision-log gates | 0 · 1 gates failed · 2 not a repo |
+| `scripts/decision_log.py` | JSONL decision memory with bounded retention | 0 · 1 corrupted |
+| `scripts/review_preflight.py` | deterministic inventory for review-i2b | 0 · 1 blocked |
+| `scripts/mimic_python.py` | isolated probe of a Python callable | see `--help` |
+| `scripts/validate_report.py` | schema check for review-i2b reports | 0 · 1 invalid |
+
+## Development
+
+```bash
+python3 -m unittest discover tests
+```
+
+```bash
+python3 -m compileall -q scripts hooks
+```
+
+Hooks are tested by piping the JSON Claude Code sends:
+
+```bash
+echo '{"cwd":"'$PWD'","prompt":"<command-name>/vibecode</command-name><command-args>enable</command-args>"}' | python3 hooks/prompt_submit.py
+```
+
+## Contributing
+
+Issues and PRs welcome. The bar: a change must keep the developer deciding. Features that make the agent decide more on its own belong in a different plugin.
+
+- Skills are prose contracts; keep them direct and technical, no cheerleading.
+- Scripts stay standard library, JSON out, documented exit codes.
+- Hooks must never fail a session: catch everything, exit 0, timeout 5.
+- Run the tests and `git diff --check` before opening a PR.
+
+## Keywords
+
+vibecoding · vibe coding · human-in-the-loop · pair programming · AI coding agent · Claude Code plugin · Codex plugin · code review · intent-to-behavior · execution slices · decision log · guardrails · developer tools · AI-assisted development · agent safety · scoped permissions
+
+## License
+
+MIT. See [LICENSE](LICENSE).

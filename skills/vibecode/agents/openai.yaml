@@ -1,0 +1,4 @@
+interface:
+  display_name: "Structured Vibe Code"
+  short_description: "Engine for the agent, wheel for the developer"
+  default_prompt: "Use $vibecode: show me the current code and the options with a diff before implementing anything."
