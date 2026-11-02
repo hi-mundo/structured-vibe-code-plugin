@@ -1,28 +1,24 @@
 ---
-description: Structured Vibe Code — init | understand | enable | disable | terse | status | allow | allowances
-argument-hint: "[init|understand|enable|disable|terse on|off|status|allow <scope> --until <date>|allowances]"
+description: Structured Vibe Code — /vibecode (init + on, or status) | off | terse | understand | allow
+argument-hint: "[off|terse|understand|allow <scope> --until <date>]"
 ---
 
-Subcommand requested: `$ARGUMENTS`
+Arguments: `$ARGUMENTS`
 
-Run the matching branch. Scripts live in `${CLAUDE_PLUGIN_ROOT}/scripts/`. Every script prints JSON; a nonzero exit code means a blocked state that you must show to the developer instead of working around.
+The `UserPromptSubmit` hook already handled the state switches (`/vibecode`, `off`, `terse`) before you read this; its message in the context tells you what it wrote. Never run `vibecode_init.py` or `vibecode_state.py` yourself for those. Scripts live in `${CLAUDE_PLUGIN_ROOT}/scripts/`; every script prints JSON and a nonzero exit code is a blocked state to show the developer, not to work around.
 
-- **(empty) or `help`**: print the table below and ask which one to run. Do not guess.
-- **`init`**: run `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/vibecode_init.py --repo .`. Show the developer the `created` and `skipped` lists from the JSON, then explain what `.vibecoding/` holds in three lines. Suggest `/vibecode understand` next.
+- **(empty)**: follow the hook message. First time in a repository it created `.vibecoding/`, `STRUCTURE.md`, `.decisions.jsonl`, the `.gitignore` entry, and turned active mode on: explain in three lines what `.vibecoding/` holds, load the `vibecode` skill, state the four rules, offer `/vibecode understand`. Repository already set up but off: confirm active in one line, state the four rules. Already active: report status (mode, terse flag, current slice, valid allowances with expiry) using `vibecode_state.py get` and `allowance.py list`.
+- **`off`**: the hook wrote `mode=off`. Confirm in one line.
+- **`terse`**: the hook toggled the compressed voice. Confirm the new value in one line. Active mode is unchanged.
 - **`understand`**: load the `understand` skill and follow it. It runs `history_chunks.py` and produces `.vibecoding/understanding.md`.
-- **`enable`** / **`disable`**: run `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/vibecode_state.py set active` (or `off`). Confirm the new mode in one line. When enabling, load the `vibecode` skill and state the three rules of active mode.
-- **`terse on`** / **`terse off`**: the hook already wrote the flag. Confirm in one line. `on` means the compressed voice from `skills/vibecode/references/terse.md`; `off` means normal prose. Active mode is unaffected.
-- **`status`**: run `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/vibecode_state.py get` and `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/allowance.py list --repo .`. Report mode, terse flag, active slice, and valid allowances with their expiry.
-- **`allow <scope> --until <YYYY-MM-DD> [--note "..."]`**: the developer is granting permission for autonomous implementation inside `<scope>` (a path or glob). Before writing it, restate exactly what the allowance covers and until when, and wait for a yes. Then run `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/allowance.py grant --repo . --scope "<scope>" --until <date> --note "<note>"`.
-- **`allowances`**: run `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/allowance.py list --repo .` and show a table: scope, expires, days left, note. Mark expired ones.
-- anything else: say the subcommand is unknown and print the table.
+- **`allow`** with no further arguments: run `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/allowance.py list --repo .` and show a table: scope, expires, days left, note. Mark expired ones. Mention `allowance.py revoke --id <id>` for removing one.
+- **`allow <scope> --until <YYYY-MM-DD> [--note "..."]`**: the developer is granting permission for autonomous implementation inside `<scope>` (a path or glob). Restate exactly what it covers and until when, wait for a yes, then run `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/allowance.py grant --repo . --scope "<scope>" --until <date> --note "<note>"`.
+- anything else: say the argument is unknown and print the table.
 
-| Subcommand | What it does |
+| Command | What it does |
 |---|---|
-| `init` | Creates `.vibecoding/`, `STRUCTURE.md`, `.decisions.jsonl`, `.gitignore` entries |
-| `understand` | Maps the repository and its history: how it started, what it became, where it is going |
-| `enable` / `disable` | Turns active mode on or off for this repository (terse voice comes on with it) |
-| `terse on` / `terse off` | Compressed voice on or off; questions and warnings stay in full prose either way |
-| `status` | Mode, current slice, valid allowances |
-| `allow <scope> --until <date>` | Grants scoped, time-boxed permission for autonomous implementation |
-| `allowances` | Lists grants and their expiry |
+| `/vibecode` | First run: creates `.vibecoding/`, `STRUCTURE.md`, `.decisions.jsonl`, `.gitignore` entry and turns active mode on. Later: turns it on, or shows status when already on |
+| `/vibecode off` | Turns active mode off for this repository |
+| `/vibecode terse` | Toggles the compressed voice; questions and warnings stay in full prose either way |
+| `/vibecode understand` | Maps the repository and its history: how it started, what it became, where it is going |
+| `/vibecode allow [<scope> --until <date>]` | Lists grants, or grants scoped, time-boxed permission for autonomous implementation |

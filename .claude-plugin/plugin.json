@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "vibecode",
   "displayName": "Structured Vibe Code",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "AI-assisted development with the developer at the wheel: every technical decision is shown with options and a diff before anything is written. Repository understanding, closed execution slices, scoped allowances, and intent-to-behavior review before commit.",
   "author": {"name": "Raimundo", "url": "https://github.com/hi-mundo"},
   "homepage": "https://github.com/hi-mundo/structured-vibe-code-plugin",
@@ -10,6 +10,6 @@
   "license": "MIT",
   "keywords": ["vibecoding", "vibe-coding", "human-in-the-loop", "pair-programming", "code-review", "guardrails", "claude-code", "codex", "developer-tools", "intent-to-behavior", "execution-slices", "decision-log"],
   "commands": "./commands/",
-  "skills": ["./skills/vibecode", "./skills/asking", "./skills/understand", "./skills/execution-slices", "./skills/review-i2b"],
+  "skills": ["./skills/vibecode", "./skills/asking", "./skills/prior-art", "./skills/understand", "./skills/execution-slices", "./skills/review-i2b"],
   "hooks": "./hooks/hooks.json"
 }

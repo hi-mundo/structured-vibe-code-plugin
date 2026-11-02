@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-10b981.svg"></a>
-  <img alt="Version" src="https://img.shields.io/badge/version-0.3.0-047857.svg">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.4.0-047857.svg">
   <img alt="Claude Code plugin" src="https://img.shields.io/badge/Claude%20Code-plugin-0f172a.svg">
   <img alt="Codex plugin" src="https://img.shields.io/badge/Codex-plugin-0f172a.svg">
   <img alt="Python 3.9+" src="https://img.shields.io/badge/python-3.9%2B%20stdlib%20only-3776ab.svg">
@@ -72,22 +72,20 @@ All optional. They make the plugin easier to work with; the skills work without 
 
 | Command | What it does |
 |---|---|
-| `/vibecode init` | Creates `.vibecoding/`, `STRUCTURE.md`, `.decisions.jsonl` and adds `.vibecoding/` to `.gitignore`. Never overwrites. |
+| `/vibecode` | First run in a repository: creates `.vibecoding/`, `STRUCTURE.md`, `.decisions.jsonl`, adds `.vibecoding/` to `.gitignore` (never overwrites) and turns **active mode** on. Later runs: turns it on again, or shows status (mode, voice, current slice, valid allowances) when already on. |
+| `/vibecode off` | Turns active mode off. State lives in `.vibecoding/state.json`, per repository. |
+| `/vibecode terse` | Toggles the compressed voice. Comes on with active mode. Questions, warnings and anything persisted stay in full prose either way. |
 | `/vibecode understand` | Maps the repository: reads `git log` in chronological chunks, writes `.vibecoding/understanding.md` (how it started, what it became, where it is going), refreshes `STRUCTURE.md`. |
-| `/vibecode enable` | Turns on **active mode** for this repository. |
-| `/vibecode disable` | Turns it off. State lives in `.vibecoding/state.json`, per repository. |
-| `/vibecode terse on` / `off` | Compressed voice on or off. Comes on with `enable`. Questions, warnings and anything persisted stay in full prose either way. |
-| `/vibecode status` | Mode, current slice, valid allowances. |
-| `/vibecode allow <scope> --until <YYYY-MM-DD> [--note "..."]` | Grants permission for autonomous implementation inside `<scope>` (path or glob) until the date. |
-| `/vibecode allowances` | Lists grants, expiry and days left. |
+| `/vibecode allow [<scope> --until <YYYY-MM-DD> [--note "..."]]` | Without arguments lists grants, expiry and days left. With a scope (path or glob) grants permission for autonomous implementation inside it until the date. |
 
 ## Active mode
 
-When enabled, a hook injects the ruleset at session start and reminds it on every turn, so it does not drift out of the agent's attention after a long session. The three rules:
+When enabled, a hook injects the ruleset at session start and reminds it on every turn, so it does not drift out of the agent's attention after a long session. The four rules:
 
 1. **Show before you ask, ask before you act.** Current code, options with before/after, recommendation, then the question. A bare question is a violation.
 2. **Never implement a whole module alone.** Anything bigger than one closed slice needs a valid allowance covering those paths.
 3. **Come back after every step.** Diff, validation, what was noticed outside the slice, next options. Commit only on explicit yes.
+4. **Never reinvent the wheel.** Anything new to the repository (module, dependency, integration, algorithm) starts with a prior-art search: the repository first, then two to four community projects that solve the same problem. Findings come back as options with source and license. Permissive code may be reused with its notice; copyleft, proprietary or unlicensed code is never copied, only its approach informs the design.
 
 Within those rules the agent is free to be fast: it reads, greps, runs tests, writes the slice you approved, and does not ask you for facts it can find in the repository.
 
@@ -143,10 +141,10 @@ Plain-text example:
 
 The ruleset is the `ultracave` level of [**caveman** by Julius Brussee](https://github.com/JuliusBrussee/caveman) (MIT), vendored unchanged into [`skills/vibecode/references/terse-upstream.md`](skills/vibecode/references/terse-upstream.md) with the upstream commit in its header. A [weekly GitHub Action](.github/workflows/sync-terse.yml) re-fetches it, runs the tests, and commits the new version when upstream changes, so this plugin follows caveman without forking it. Our own adaptations (what stays in full prose inside the Structured Vibe Code loop) live next to it in [`terse.md`](skills/vibecode/references/terse.md). Credit and license: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). If you want the whole caveman experience (levels, commands, stats, other agents), install caveman itself.
 
-Turn it off, keep active mode:
+Turn it off, keep active mode (same command turns it back on):
 
 ```bash
-/vibecode terse off
+/vibecode terse
 ```
 
 ## What it creates in your repository
@@ -169,6 +167,7 @@ STRUCTURE.md                        repository model          committed
 |---|---|---|
 | `vibecode` | The loop: preflight, decisions, closed slice, allowance gate, implement, validate, report | by the agent in active mode, or `$vibecode` |
 | `asking` | The decision protocol and its renderings | by every other skill when a human call is needed |
+| `prior-art` | What already exists before building: repository, then community projects, with license gate | by the loop whenever the task adds something new to the repository, or `$prior-art` |
 | `understand` | Repository and history mapping in chunks | `/vibecode understand` |
 | `execution-slices` | Scope gates: what counts as a closed slice, what goes to the backlog | inside the loop |
 | `review-i2b` | Intent-to-behavior review before commit: reconstruct intended behavior, inspect at least three revisions, collect reproducible evidence | inside the loop, or `$review-i2b` |
@@ -185,7 +184,7 @@ Standard library only, one JSON object on stdout, meaningful exit codes. The ski
 | `scripts/allowance.py grant\|check\|list\|revoke` | scoped permissions | 0 covered · 1 not · 2 usage · 3 expired |
 | `scripts/history_chunks.py` | chronological history chunks | 0 · 1 too short · 2 git failed |
 | `scripts/protector_preflight.py` | worktree, model, decision-log gates | 0 · 1 gates failed · 2 not a repo |
-| `scripts/decision_log.py` | JSONL decision memory with bounded retention | 0 · 1 corrupted |
+| `scripts/decision_log.py` | JSONL decision memory with bounded retention; `--prior-art-json` records sources and licenses | 0 · 1 corrupted · 11 bad prior-art shape |
 | `scripts/review_preflight.py` | deterministic inventory for review-i2b | 0 · 1 blocked |
 | `scripts/mimic_python.py` | isolated probe of a Python callable | see `--help` |
 | `scripts/validate_report.py` | schema check for review-i2b reports | 0 · 1 invalid |

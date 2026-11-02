@@ -59,11 +59,11 @@ def main() -> int:
                 active_rules(),
             ]
             if state["terse"]:
-                lines += ["", "TERSE VOICE ON (`/vibecode terse off` to switch). Rules:", "", terse_rules()]
+                lines += ["", "TERSE VOICE ON (`/vibecode terse` toggles it). Rules:", "", terse_rules()]
         elif initialized:
-            lines = [f"Structured Vibe Code installed in {repo.name}, inactive. `/vibecode enable` turns on active mode; `/vibecode status` shows state."]
+            lines = [f"Structured Vibe Code installed in {repo.name}, inactive. `/vibecode` turns on active mode."]
         else:
-            lines = ["Structured Vibe Code available. `/vibecode init` prepares this repository; `/vibecode understand` maps it before changes."]
+            lines = ["Structured Vibe Code available. `/vibecode` prepares this repository and turns on active mode; `/vibecode understand` maps it before changes."]
         print("\n".join(lines))
     except Exception:  # noqa: BLE001 - a hook must never block the session
         pass

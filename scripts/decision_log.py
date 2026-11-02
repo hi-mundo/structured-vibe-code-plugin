@@ -14,6 +14,7 @@ MIN_RECORDS = 200
 SOFT_MAX = 1_048_576
 TARGET = 921_600
 BLOCKING = {"rejected": "DEC003", "failed": "DEC004"}
+PRIOR_ART_USES = {"dependency", "code", "pattern"}
 
 
 def fingerprint(domain: str, scope: str, decision: str, paths: list[str]) -> str:
@@ -75,6 +76,7 @@ def main() -> int:
     parser.add_argument("--domain"); parser.add_argument("--scope"); parser.add_argument("--decision")
     parser.add_argument("--reason"); parser.add_argument("--status"); parser.add_argument("--paths-json", default="[]")
     parser.add_argument("--override", action="store_true")
+    parser.add_argument("--prior-art-json", default="[]", help='[{"project","url","license","used_as"}] from the prior-art skill')
     args = parser.parse_args(); path = Path(args.file)
     try: records = load(path)
     except ValueError as exc:
@@ -87,6 +89,9 @@ def main() -> int:
     paths = json.loads(args.paths_json)
     if not isinstance(paths, list) or not paths:
         print(json.dumps({"ok": False, "code": "DEC007"})); return 7
+    prior_art = json.loads(args.prior_art_json)
+    if not isinstance(prior_art, list) or any(not isinstance(x, dict) or not {"project", "license", "used_as"} <= set(x) or x["used_as"] not in PRIOR_ART_USES for x in prior_art):
+        print(json.dumps({"ok": False, "code": "DEC011", "expected": {"project": "name", "url": "optional", "license": "SPDX id or none", "used_as": sorted(PRIOR_ART_USES)}})); return 11
     fp = fingerprint(args.domain, args.scope, args.decision, paths)
     prior = next((x for x in reversed(records) if x.get("fingerprint") == fp and x.get("status") in BLOCKING), None)
     if prior and not args.override:
@@ -94,6 +99,7 @@ def main() -> int:
         print(json.dumps({"ok": False, "code": code, "requires": "DEC009_HUMAN_OVERRIDE_REQUIRED", "prior": prior.get("id")})); return 9
     now = datetime.now(timezone.utc).isoformat()
     record = {"id": hashlib.sha256(f"{now}:{fp}".encode()).hexdigest()[:16], "timestamp": now, "domain": args.domain, "scope": args.scope, "decision": args.decision, "reason": args.reason, "status": args.status, "paths": paths, "fingerprint": fp}
+    if prior_art: record["prior_art"] = prior_art
     records.append(record); atomic_write(path, compact(records))
     print(json.dumps({"ok": True, "record": record})); return 0
 

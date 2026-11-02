@@ -1,0 +1,4 @@
+interface:
+  display_name: "Prior art"
+  short_description: "Find what already solves this, in the repository and in the community, before building it"
+  default_prompt: "Use $prior-art before building this: what in the repository already does it, which community projects solve the same problem, under which licenses."

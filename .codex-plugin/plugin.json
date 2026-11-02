@@ -1,6 +1,6 @@
 {
   "name": "vibecode",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "AI-assisted development with the developer at the wheel: options and diffs before every change, closed slices, scoped allowances, intent-to-behavior review before commit.",
   "author": {"name": "Raimundo", "url": "https://github.com/hi-mundo"},
   "homepage": "https://github.com/hi-mundo/structured-vibe-code-plugin",

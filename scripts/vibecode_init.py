@@ -21,11 +21,8 @@ def head(repo: Path) -> str:
         return "<no commits yet>"
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--repo", default=".")
-    args = parser.parse_args()
-    repo = find_repo(args.repo)
+def init(repo: Path) -> dict:
+    """Create the support files that do not exist yet. Never overwrites. Returns the JSON report."""
     created, skipped = [], []
 
     def ensure(rel: str, content: str) -> None:
@@ -55,8 +52,14 @@ def main() -> int:
         created.append(".gitignore (+ .vibecoding/)")
     else:
         skipped.append(".gitignore")
+    return {"ok": True, "repo": str(repo), "created": created, "skipped": skipped, "next": "/vibecode understand"}
 
-    print(json.dumps({"ok": True, "repo": str(repo), "created": created, "skipped": skipped, "next": "/vibecode understand"}, sort_keys=True))
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--repo", default=".")
+    args = parser.parse_args()
+    print(json.dumps(init(find_repo(args.repo)), sort_keys=True))
     return 0
 
 

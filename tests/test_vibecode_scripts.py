@@ -167,26 +167,37 @@ class HookTests(unittest.TestCase):
     def payload(self, prompt):
         return json.dumps({"cwd": str(self.repo), "prompt": prompt})
 
-    def test_enable_command_writes_state_and_reminder_follows(self):
-        code, out = run(HOOKS / "prompt_submit.py", stdin=self.payload("<command-name>/vibecode</command-name><command-args>enable</command-args>"))
+    def test_bare_command_inits_then_activates_then_reports(self):
+        code, out = run(HOOKS / "prompt_submit.py", stdin=self.payload("<command-name>/vibecode</command-name><command-args></command-args>"))
         self.assertEqual(code, 0)
-        self.assertIn("mode=active", out["hookSpecificOutput"]["additionalContext"])
+        ctx = out["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("initialized and active", ctx)
+        self.assertTrue((self.repo / "STRUCTURE.md").exists(), "first /vibecode runs init")
         self.assertEqual(json.loads((self.repo / ".vibecoding" / "state.json").read_text())["mode"], "active")
         _, out = run(HOOKS / "prompt_submit.py", stdin=self.payload("add a login endpoint"))
-        self.assertIn("ACTIVE", out["hookSpecificOutput"]["additionalContext"])
-        _, out = run(HOOKS / "prompt_submit.py", stdin=self.payload("/vibecode:vibecode disable"))
+        ctx = out["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("ACTIVE", ctx)
+        self.assertIn("prior-art first", ctx, "rule 4 is reminded every turn")
+        _, out = run(HOOKS / "prompt_submit.py", stdin=self.payload("/vibecode:vibecode off"))
         self.assertIn("mode=off", out["hookSpecificOutput"]["additionalContext"])
         code, out = run(HOOKS / "prompt_submit.py", stdin=self.payload("hello"))
         self.assertEqual((code, out), (0, None), "inactive mode injects nothing")
+        _, out = run(HOOKS / "prompt_submit.py", stdin=self.payload("/vibecode"))
+        self.assertIn("mode=active", out["hookSpecificOutput"]["additionalContext"], "second bare run only re-activates")
+        _, out = run(HOOKS / "prompt_submit.py", stdin=self.payload("/vibecode"))
+        self.assertIn("already active", out["hookSpecificOutput"]["additionalContext"], "third bare run asks for status")
+        _, out = run(HOOKS / "prompt_submit.py", stdin=self.payload("/vibecode enable"))
+        self.assertNotIn("state already written", out["hookSpecificOutput"]["additionalContext"], "old names are not aliases")
 
     def test_session_start_injects_rules_only_when_active(self):
         proc = subprocess.run([sys.executable, str(HOOKS / "session_start.py")], input=json.dumps({"cwd": str(self.repo), "source": "startup"}), text=True, capture_output=True)
         self.assertEqual(proc.returncode, 0)
-        self.assertIn("/vibecode init", proc.stdout)
+        self.assertIn("`/vibecode` prepares", proc.stdout)
         run(SCRIPTS / "vibecode_state.py", "set", "active", "--repo", self.repo)
         proc = subprocess.run([sys.executable, str(HOOKS / "session_start.py")], input=json.dumps({"cwd": str(self.repo), "source": "startup"}), text=True, capture_output=True)
         self.assertIn("ACTIVE", proc.stdout)
         self.assertIn("Show before you ask", proc.stdout)
+        self.assertIn("Never reinvent the wheel", proc.stdout, "rule 4 ships with the ruleset")
         self.assertIn("TERSE VOICE ON", proc.stdout)
         self.assertIn("# ultracave", proc.stdout, "vendored upstream body is injected")
         self.assertNotIn("<!-- upstream body below", proc.stdout, "provenance header is not injected")
@@ -194,15 +205,16 @@ class HookTests(unittest.TestCase):
         proc = subprocess.run([sys.executable, str(HOOKS / "session_start.py")], input=json.dumps({"cwd": str(self.repo), "source": "startup"}), text=True, capture_output=True)
         self.assertNotIn("TERSE VOICE ON", proc.stdout)
 
-    def test_terse_command_and_reminder(self):
-        run(HOOKS / "prompt_submit.py", stdin=self.payload("/vibecode enable"))
+    def test_terse_toggle_and_reminder(self):
+        run(HOOKS / "prompt_submit.py", stdin=self.payload("/vibecode"))
         _, out = run(HOOKS / "prompt_submit.py", stdin=self.payload("anything"))
         self.assertIn("TERSE VOICE ON", out["hookSpecificOutput"]["additionalContext"])
-        _, out = run(HOOKS / "prompt_submit.py", stdin=self.payload("<command-name>/vibecode</command-name><command-args>terse off</command-args>"))
+        _, out = run(HOOKS / "prompt_submit.py", stdin=self.payload("<command-name>/vibecode</command-name><command-args>terse</command-args>"))
         self.assertIn("terse=off", out["hookSpecificOutput"]["additionalContext"])
         _, out = run(HOOKS / "prompt_submit.py", stdin=self.payload("anything"))
         self.assertNotIn("TERSE VOICE ON", out["hookSpecificOutput"]["additionalContext"])
-        self.assertIn("never Yes/No/OK", out["hookSpecificOutput"]["additionalContext"])
+        _, out = run(HOOKS / "prompt_submit.py", stdin=self.payload("/vibecode terse"))
+        self.assertIn("terse=on", out["hookSpecificOutput"]["additionalContext"], "toggle goes back on")
 
     def test_hooks_survive_garbage_stdin(self):
         for script in ("prompt_submit.py", "session_start.py"):

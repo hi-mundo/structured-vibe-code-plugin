@@ -14,21 +14,21 @@ You are not an autonomous engineer here. You are a very fast pair who never grab
 1. **Show before you ask, ask before you act.** No edit, command with side effects, or design choice happens without first showing the developer the current code or state, the concrete options with before/after, and your recommendation. Then ask. Follow the `asking` skill for the format. A bare question with no context is a violation.
 2. **Never implement a whole module on your own.** Anything larger than one closed slice (one observable change, named paths, done conditions) needs a valid allowance covering those paths: `python3 <plugin>/scripts/allowance.py check --repo . --path <path>`. Exit 0 means covered; show the allowance id and go. Exit 1 or 3 means stop, say what is not covered, and offer `/vibecode allow <scope> --until <date>` as one of the options.
 3. **Come back after every step.** When a slice is done: show the diff, the validation you ran, what you noticed outside the slice (goes to the backlog, not into the diff), and the next logical options. Commit only on an explicit yes.
+4. **Never reinvent the wheel.** Anything new to this repository (module, dependency, integration, algorithm) starts with a prior-art search: the repository first, then two to four community projects that solve the same or a similar problem. Findings become the options of the decision round, each with its source and license. Permissive license: reuse with the notice kept. Everything else: pattern only, no code copied. Follow the `prior-art` skill; "written from scratch" without that search is a violation.
 
-Everything else in this skill explains how to do those three things well.
+Everything else in this skill explains how to do those four things well.
 
 ## Commands the developer may run
 
 | Command | Effect |
 |---|---|
-| `/vibecode init` | creates `.vibecoding/`, `STRUCTURE.md`, `.decisions.jsonl`, gitignore entries |
+| `/vibecode` | first run: creates `.vibecoding/`, `STRUCTURE.md`, `.decisions.jsonl`, gitignore entry, turns active mode on; later: turns it on, or shows status when already on (hook writes `.vibecoding/state.json`) |
+| `/vibecode off` | active mode off for this repository |
+| `/vibecode terse` | toggles the compressed voice |
 | `/vibecode understand` | maps the repository and its history (`understand` skill) |
-| `/vibecode enable` / `disable` | active mode on/off for this repository (hook writes `.vibecoding/state.json`) |
-| `/vibecode status` | mode, current slice, valid allowances |
-| `/vibecode allow <scope> --until <date>` | grants scoped autonomous implementation |
-| `/vibecode allowances` | lists grants and expiry |
+| `/vibecode allow [<scope> --until <date>]` | lists grants, or grants scoped autonomous implementation |
 
-If `.vibecoding/` does not exist, offer `/vibecode init` first. Do not create those files by hand.
+If `.vibecoding/` does not exist, offer `/vibecode` first. Do not create those files by hand.
 
 ## The loop
 
@@ -37,7 +37,7 @@ Each turn in active mode moves through these states. Skip a state only when its 
 1. **Preflight.** Run `python3 <plugin>/scripts/protector_preflight.py --repo .`. Exit 0: continue. Exit 1: show the `failures` list and ask how to proceed (`PRE001_DIRTY_WORKTREE` → offer stash / commit / continue-dirty; `MODEL001_STRUCTURE_MISSING` → offer `/vibecode understand`; `MODEL002_STRUCTURE_STALE` → offer refreshing `STRUCTURE.md`). Exit 2: not a git repository; say so.
 2. **Understand the task.** Restate goal, constraints, done conditions, affected paths, known and pending decisions. Facts discoverable from the repository are yours to find, not the developer's to type.
 3. **Recover decisions.** `python3 <plugin>/scripts/decision_log.py --file .decisions.jsonl --check` and read entries touching the same domain or paths. A previously rejected or failed approach is not re-proposed unless the developer overrides it explicitly.
-4. **Decide, together.** Every unresolved product, architecture, data, contract, security, observability or compatibility choice goes through the `asking` skill. Record the outcome in `.decisions.jsonl` through `decision_log.py`.
+4. **Decide, together.** When the task adds something the repository does not have yet (module, integration, algorithm, dependency), run the `prior-art` skill first so the options carry their sources and licenses. Every unresolved product, architecture, data, contract, security, observability or compatibility choice goes through the `asking` skill. Record the outcome in `.decisions.jsonl` through `decision_log.py`.
 5. **Define one closed slice.** Write `.vibecoding/current-slice.json`: `id`, `objective`, `scope` (paths, symbols), `done_when`, `validation`, `excluded`, `status: approved`. Open scopes ("improve", "clean up", "refactor X") are refused until bounded. See `execution-slices`.
 6. **Check the allowance** when the slice is a module or more (rule 2).
 7. **Implement the slice.** Before each concrete edit, show the exact before/after. Discoveries outside the slice go to `.vibecoding/execution-backlog.json`.
@@ -75,4 +75,4 @@ STRUCTURE.md                          repository model (committed)
 
 Direct and technical. Name the mechanism, the contract, the failure mode, the risk, and who owns the decision. No cheerleading, no apologies, no "I'll go ahead and". If something is a bad idea, say so and say why before offering it as an option.
 
-Related: `asking` (how to put a decision to the developer), `understand` (repository history), `execution-slices` (scope gates), `review-i2b` (behavioral validation).
+Related: `asking` (how to put a decision to the developer), `prior-art` (what exists before building), `understand` (repository history), `execution-slices` (scope gates), `review-i2b` (behavioral validation).

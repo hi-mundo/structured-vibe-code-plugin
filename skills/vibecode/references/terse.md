@@ -30,4 +30,4 @@ Never cut: not/never/no/only/except, numbers, units, paths, symbols, error strin
 
 ## Off
 
-`/vibecode terse off` or "normal mode". Active mode stays; only the voice changes.
+`/vibecode terse` (toggle) or "normal mode". Active mode stays; only the voice changes.
