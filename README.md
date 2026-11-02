@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.svg" alt="Structured Vibe Code — the agent is the engine, the developer holds the wheel" width="100%">
+  <img src="assets/banner.png" alt="Structured Vibe Code — a hooded developer playing code-chess against a CRT monitor; the agent is the engine, the developer holds the wheel" width="100%">
 </p>
 
 <p align="center">
