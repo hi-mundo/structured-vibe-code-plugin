@@ -51,6 +51,14 @@ class InitAndStateTests(unittest.TestCase):
         _, out = run(SCRIPTS / "vibecode_state.py", "get", "--repo", self.repo / "nested-does-not-exist-yet")
         self.assertEqual(out["mode"], "active", "find_repo walks up to the repository root")
 
+    def test_terse_defaults_on_with_active_and_toggles(self):
+        _, out = run(SCRIPTS / "vibecode_state.py", "set", "active", "--repo", self.repo)
+        self.assertEqual((out["mode"], out["terse"]), ("active", True))
+        _, out = run(SCRIPTS / "vibecode_state.py", "terse", "off", "--repo", self.repo)
+        self.assertEqual((out["mode"], out["terse"]), ("active", False))
+        _, out = run(SCRIPTS / "vibecode_state.py", "set", "off", "--repo", self.repo)
+        self.assertEqual(out["terse"], False, "explicit terse choice survives a mode change")
+
     def test_corrupt_state_reads_as_off(self):
         (self.repo / ".vibecoding").mkdir()
         (self.repo / ".vibecoding" / "state.json").write_text("{not json")
@@ -127,6 +135,26 @@ class HistoryChunksTests(unittest.TestCase):
             self.assertFalse(out["ok"])
 
 
+class SyncTerseTests(unittest.TestCase):
+    def test_render_and_body_round_trip_without_network(self):
+        sys.path.insert(0, str(SCRIPTS))
+        import sync_terse
+
+        upstream = "---\nname: ultracave\ndescription: x\n---\n\n# ultracave\n\nRules.\n"
+        body = sync_terse.strip_frontmatter(upstream)
+        self.assertTrue(body.startswith("# ultracave"))
+        rendered = sync_terse.render(body, "abc123", "2026-01-01")
+        self.assertIn("abc123", rendered)
+        self.assertIn("MIT", rendered)
+        self.assertEqual(sync_terse.body_of(rendered), body.strip())
+
+    def test_vendored_file_has_provenance_and_rules(self):
+        text = (ROOT / "skills" / "vibecode" / "references" / "terse-upstream.md").read_text()
+        self.assertRegex(text, r"Upstream commit: `[0-9a-f]{7,40}|unknown`")
+        self.assertIn("JuliusBrussee/caveman", text)
+        self.assertIn("## Rules", text)
+
+
 class HookTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -159,6 +187,22 @@ class HookTests(unittest.TestCase):
         proc = subprocess.run([sys.executable, str(HOOKS / "session_start.py")], input=json.dumps({"cwd": str(self.repo), "source": "startup"}), text=True, capture_output=True)
         self.assertIn("ACTIVE", proc.stdout)
         self.assertIn("Show before you ask", proc.stdout)
+        self.assertIn("TERSE VOICE ON", proc.stdout)
+        self.assertIn("# ultracave", proc.stdout, "vendored upstream body is injected")
+        self.assertNotIn("<!-- upstream body below", proc.stdout, "provenance header is not injected")
+        run(SCRIPTS / "vibecode_state.py", "terse", "off", "--repo", self.repo)
+        proc = subprocess.run([sys.executable, str(HOOKS / "session_start.py")], input=json.dumps({"cwd": str(self.repo), "source": "startup"}), text=True, capture_output=True)
+        self.assertNotIn("TERSE VOICE ON", proc.stdout)
+
+    def test_terse_command_and_reminder(self):
+        run(HOOKS / "prompt_submit.py", stdin=self.payload("/vibecode enable"))
+        _, out = run(HOOKS / "prompt_submit.py", stdin=self.payload("anything"))
+        self.assertIn("TERSE VOICE ON", out["hookSpecificOutput"]["additionalContext"])
+        _, out = run(HOOKS / "prompt_submit.py", stdin=self.payload("<command-name>/vibecode</command-name><command-args>terse off</command-args>"))
+        self.assertIn("terse=off", out["hookSpecificOutput"]["additionalContext"])
+        _, out = run(HOOKS / "prompt_submit.py", stdin=self.payload("anything"))
+        self.assertNotIn("TERSE VOICE ON", out["hookSpecificOutput"]["additionalContext"])
+        self.assertIn("never Yes/No/OK", out["hookSpecificOutput"]["additionalContext"])
 
     def test_hooks_survive_garbage_stdin(self):
         for script in ("prompt_submit.py", "session_start.py"):

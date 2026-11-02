@@ -38,7 +38,7 @@ def main() -> int:
         created.append(rel)
 
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    ensure(".vibecoding/state.json", json.dumps({"mode": "off", "updated_at": now}, indent=2) + "\n")
+    ensure(".vibecoding/state.json", json.dumps({"mode": "off", "terse": True, "updated_at": now}, indent=2) + "\n")
     ensure(".vibecoding/allowances/.gitkeep", "")
     ensure(".vibecoding/current-slice.json", json.dumps({"id": None, "status": "none"}, indent=2) + "\n")
     ensure(".vibecoding/execution-backlog.json", "[]\n")

@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-10b981.svg"></a>
-  <img alt="Version" src="https://img.shields.io/badge/version-0.2.0-047857.svg">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.3.0-047857.svg">
   <img alt="Claude Code plugin" src="https://img.shields.io/badge/Claude%20Code-plugin-0f172a.svg">
   <img alt="Codex plugin" src="https://img.shields.io/badge/Codex-plugin-0f172a.svg">
   <img alt="Python 3.9+" src="https://img.shields.io/badge/python-3.9%2B%20stdlib%20only-3776ab.svg">
@@ -18,6 +18,7 @@
   <a href="#active-mode">Active mode</a> ·
   <a href="#allowances">Allowances</a> ·
   <a href="#how-a-decision-looks">How a decision looks</a> ·
+  <a href="#terse-voice">Terse voice</a> ·
   <a href="#skills">Skills</a> ·
   <a href="#contributing">Contributing</a>
 </p>
@@ -75,6 +76,7 @@ All optional. They make the plugin easier to work with; the skills work without 
 | `/vibecode understand` | Maps the repository: reads `git log` in chronological chunks, writes `.vibecoding/understanding.md` (how it started, what it became, where it is going), refreshes `STRUCTURE.md`. |
 | `/vibecode enable` | Turns on **active mode** for this repository. |
 | `/vibecode disable` | Turns it off. State lives in `.vibecoding/state.json`, per repository. |
+| `/vibecode terse on` / `off` | Compressed voice on or off. Comes on with `enable`. Questions, warnings and anything persisted stay in full prose either way. |
 | `/vibecode status` | Mode, current slice, valid allowances. |
 | `/vibecode allow <scope> --until <YYYY-MM-DD> [--note "..."]` | Grants permission for autonomous implementation inside `<scope>` (path or glob) until the date. |
 | `/vibecode allowances` | Lists grants, expiry and days left. |
@@ -135,13 +137,25 @@ Plain-text example:
 >
 > Which one?
 
+## Terse voice
+
+**Disclaimer: active mode turns on a compressed speaking style by default.** Explanations come as fragments ("Fixture built before migration. Test fail. Reorder."), code and diffs come in full, and every question to you comes in full sentences with named options. It reads blunt. It is meant to: you pay per token and read in a terminal.
+
+The ruleset is the `ultracave` level of [**caveman** by Julius Brussee](https://github.com/JuliusBrussee/caveman) (MIT), vendored unchanged into [`skills/vibecode/references/terse-upstream.md`](skills/vibecode/references/terse-upstream.md) with the upstream commit in its header. A [weekly GitHub Action](.github/workflows/sync-terse.yml) re-fetches it, runs the tests, and commits the new version when upstream changes, so this plugin follows caveman without forking it. Our own adaptations (what stays in full prose inside the Structured Vibe Code loop) live next to it in [`terse.md`](skills/vibecode/references/terse.md). Credit and license: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). If you want the whole caveman experience (levels, commands, stats, other agents), install caveman itself.
+
+Turn it off, keep active mode:
+
+```bash
+/vibecode terse off
+```
+
 ## What it creates in your repository
 
 ```text
 STRUCTURE.md                        repository model          committed
 .decisions.jsonl                    decision memory           committed
 .vibecoding/                        everything below          gitignored
-  state.json                        active | off
+  state.json                        mode: active | off, terse: true | false
   allowances/*.json                 scoped, dated grants
   current-slice.json                the one thing being done now
   execution-backlog.json            noticed, not done
@@ -166,7 +180,8 @@ Standard library only, one JSON object on stdout, meaningful exit codes. The ski
 | Script | Purpose | Exit codes |
 |---|---|---|
 | `scripts/vibecode_init.py` | create support files | 0 |
-| `scripts/vibecode_state.py get\|set active\|off` | mode switch | 0 |
+| `scripts/vibecode_state.py get\|set active\|off\|terse on\|off` | mode and voice switches | 0 |
+| `scripts/sync_terse.py [--check]` | vendor the upstream ultracave ruleset | 0 · 1 drift (`--check`) · 2 fetch failed |
 | `scripts/allowance.py grant\|check\|list\|revoke` | scoped permissions | 0 covered · 1 not · 2 usage · 3 expired |
 | `scripts/history_chunks.py` | chronological history chunks | 0 · 1 too short · 2 git failed |
 | `scripts/protector_preflight.py` | worktree, model, decision-log gates | 0 · 1 gates failed · 2 not a repo |
@@ -202,7 +217,7 @@ Issues and PRs welcome. The bar: a change must keep the developer deciding. Feat
 
 ## Keywords
 
-vibecoding · vibe coding · human-in-the-loop · pair programming · AI coding agent · Claude Code plugin · Codex plugin · code review · intent-to-behavior · execution slices · decision log · guardrails · developer tools · AI-assisted development · agent safety · scoped permissions
+vibecoding · caveman · terse · token-efficient · vibe coding · human-in-the-loop · pair programming · AI coding agent · Claude Code plugin · Codex plugin · code review · intent-to-behavior · execution slices · decision log · guardrails · developer tools · AI-assisted development · agent safety · scoped permissions
 
 ## License
 
